@@ -107,7 +107,7 @@ export default function SystemsPage() {
       case "online":
         return "bg-white/20 text-white"
       case "warning":
-        return "bg-orange-500/20 text-orange-500"
+        return "bg-blue-500/20 text-blue-500"
       case "maintenance":
         return "bg-neutral-500/20 text-neutral-300"
       case "offline":
@@ -154,7 +154,7 @@ export default function SystemsPage() {
   const getHealthColor = (health) => {
     if (health >= 95) return "text-white"
     if (health >= 85) return "text-white"
-    if (health >= 70) return "text-orange-500"
+    if (health >= 70) return "text-blue-500"
     return "text-red-500"
   }
 
@@ -167,8 +167,8 @@ export default function SystemsPage() {
           <p className="text-sm text-neutral-400">Infrastructure health and performance monitoring</p>
         </div>
         <div className="flex gap-2">
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white">System Scan</Button>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white">Maintenance Mode</Button>
+                      <Button className="bg-blue-500 hover:bg-blue-600 text-white">System Scan</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white">Maintenance Mode</Button>
         </div>
       </div>
 
@@ -191,9 +191,9 @@ export default function SystemsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-neutral-400 tracking-wider">WARNINGS</p>
-                <p className="text-2xl font-bold text-orange-500 font-mono">3</p>
+                <p className="text-2xl font-bold text-blue-500 font-mono">3</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-orange-500" />
+              <AlertTriangle className="w-8 h-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -228,7 +228,7 @@ export default function SystemsPage() {
         {systems.map((system) => (
           <Card
             key={system.id}
-            className="bg-neutral-900 border-neutral-700 hover:border-orange-500/50 transition-colors cursor-pointer"
+                          className="bg-neutral-900 border-neutral-700 hover:border-blue-500/50 transition-colors cursor-pointer"
             onClick={() => setSelectedSystem(system)}
           >
             <CardHeader className="pb-3">
@@ -259,7 +259,7 @@ export default function SystemsPage() {
                   <div className="text-white font-mono">{system.cpu}%</div>
                   <div className="w-full bg-neutral-800 rounded-full h-1 mt-1">
                     <div
-                      className="bg-orange-500 h-1 rounded-full transition-all duration-300"
+                      className="bg-blue-500 h-1 rounded-full transition-all duration-300"
                       style={{ width: `${system.cpu}%` }}
                     ></div>
                   </div>
@@ -269,7 +269,7 @@ export default function SystemsPage() {
                   <div className="text-white font-mono">{system.memory}%</div>
                   <div className="w-full bg-neutral-800 rounded-full h-1 mt-1">
                     <div
-                      className="bg-orange-500 h-1 rounded-full transition-all duration-300"
+                      className="bg-blue-500 h-1 rounded-full transition-all duration-300"
                       style={{ width: `${system.memory}%` }}
                     ></div>
                   </div>
@@ -279,7 +279,7 @@ export default function SystemsPage() {
                   <div className="text-white font-mono">{system.storage}%</div>
                   <div className="w-full bg-neutral-800 rounded-full h-1 mt-1">
                     <div
-                      className="bg-orange-500 h-1 rounded-full transition-all duration-300"
+                      className="bg-blue-500 h-1 rounded-full transition-all duration-300"
                       style={{ width: `${system.storage}%` }}
                     ></div>
                   </div>
@@ -372,7 +372,7 @@ export default function SystemsPage() {
                         </div>
                         <div className="w-full bg-neutral-800 rounded-full h-2">
                           <div
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${selectedSystem.cpu}%` }}
                           ></div>
                         </div>
@@ -385,7 +385,7 @@ export default function SystemsPage() {
                         </div>
                         <div className="w-full bg-neutral-800 rounded-full h-2">
                           <div
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${selectedSystem.memory}%` }}
                           ></div>
                         </div>
@@ -398,7 +398,7 @@ export default function SystemsPage() {
                         </div>
                         <div className="w-full bg-neutral-800 rounded-full h-2">
                           <div
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${selectedSystem.storage}%` }}
                           ></div>
                         </div>
@@ -409,7 +409,7 @@ export default function SystemsPage() {
               </div>
 
               <div className="flex gap-2 pt-4 border-t border-neutral-700">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">Restart System</Button>
+                <Button className="bg-blue-500 hover:bg-blue-600 text-white">Restart System</Button>
                 <Button
                   variant="outline"
                   className="border-neutral-700 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300 bg-transparent"

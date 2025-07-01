@@ -1,115 +1,224 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw } from "lucide-react"
+import { ArrowRight, Shield, CreditCard, Users, TrendingUp, CheckCircle, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import CommandCenterPage from "./command-center/page"
-import AgentNetworkPage from "./agent-network/page"
-import OperationsPage from "./operations/page"
-import IntelligencePage from "./intelligence/page"
-import SystemsPage from "./systems/page"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
-export default function TacticalDashboard() {
-  const [activeSection, setActiveSection] = useState("overview")
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+export default function LandingPage() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleGetStarted = () => {
+    setIsLoading(true)
+    // Simulate loading
+    setTimeout(() => {
+      window.location.href = "/login"
+    }, 1000)
+  }
+
+  const features = [
+    {
+      icon: CreditCard,
+      title: "Transfert Multi-Plateforme",
+      description: "Envoyez de l'argent vers Kulu, Soutra Money et Orange Money en quelques clics"
+    },
+    {
+      icon: Shield,
+      title: "Sécurité Maximale",
+      description: "Transactions chiffrées et authentification à deux facteurs pour votre sécurité"
+    },
+    {
+      icon: Users,
+      title: "Gestion des Membres",
+      description: "Gérez facilement vos listes de bénéficiaires avec import/export Excel"
+    },
+    {
+      icon: TrendingUp,
+      title: "Suivi en Temps Réel",
+      description: "Historique détaillé de tous vos paiements avec filtres avancés"
+    }
+  ]
+
+  const providers = [
+    { name: "Kulu", color: "bg-green-500" },
+    { name: "Soutra Money", color: "bg-blue-500" },
+    { name: "Orange Money", color: "bg-orange-500" }
+  ]
+
+  const stats = [
+    { value: "50K+", label: "Transactions" },
+    { value: "10K+", label: "Utilisateurs" },
+    { value: "99.9%", label: "Disponibilité" },
+    { value: "24/7", label: "Support" }
+  ]
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <div
-        className={`${sidebarCollapsed ? "w-16" : "w-70"} bg-neutral-900 border-r border-neutral-700 transition-all duration-300 fixed md:relative z-50 md:z-auto h-full md:h-auto ${!sidebarCollapsed ? "md:block" : ""}`}
-      >
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-8">
-            <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
-              <h1 className="text-orange-500 font-bold text-lg tracking-wider">TACTICAL OPS</h1>
-              <p className="text-neutral-500 text-xs">v2.1.7 CLASSIFIED</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-neutral-400 hover:text-orange-500"
-            >
-              <ChevronRight
-                className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${sidebarCollapsed ? "" : "rotate-180"}`}
-              />
-            </Button>
+    <div className="min-h-screen bg-black">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, #3b82f6 1px, transparent 1px),
+                           radial-gradient(circle at 75% 75%, #3b82f6 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }}></div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="relative z-10 flex items-center justify-between p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+            <Shield className="w-5 h-5 text-white" />
           </div>
-
-          <nav className="space-y-2">
-            {[
-              { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
-              { id: "agents", icon: Users, label: "AGENT NETWORK" },
-              { id: "operations", icon: Target, label: "OPERATIONS" },
-              { id: "intelligence", icon: Shield, label: "INTELLIGENCE" },
-              { id: "systems", icon: Settings, label: "SYSTEMS" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${
-                  activeSection === item.id
-                    ? "bg-orange-500 text-white"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-                }`}
-              >
-                <item.icon className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-              </button>
-            ))}
-          </nav>
-
-          {!sidebarCollapsed && (
-            <div className="mt-8 p-4 bg-neutral-800 border border-neutral-700 rounded">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-xs text-white">SYSTEM ONLINE</span>
-              </div>
-              <div className="text-xs text-neutral-500">
-                <div>UPTIME: 72:14:33</div>
-                <div>AGENTS: 847 ACTIVE</div>
-                <div>MISSIONS: 23 ONGOING</div>
-              </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-wider">SKY PAY</h1>
+            <p className="text-xs text-neutral-400">Transfert d'argent sécurisé</p>
+          </div>
+        </div>
+        <Button
+          onClick={handleGetStarted}
+          disabled={isLoading}
+          className="bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              CONNEXION...
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              ACCÉDER
+              <ArrowRight className="w-4 h-4" />
             </div>
           )}
+        </Button>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative z-10 text-center px-6 py-20">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
+            Transfert d'Argent
+            <span className="text-blue-500 block">Simplifié</span>
+          </h1>
+          <p className="text-xl text-neutral-300 mb-8 max-w-2xl mx-auto">
+            Envoyez de l'argent en toute sécurité vers les comptes Kulu, Soutra Money et Orange Money. 
+            Gestion complète de vos bénéficiaires et suivi de vos transactions.
+          </p>
+          
+          {/* Supported Providers */}
+          <div className="flex justify-center gap-4 mb-8">
+            {providers.map((provider) => (
+              <div key={provider.name} className="flex items-center gap-2">
+                <div className={`w-3 h-3 ${provider.color} rounded-full`}></div>
+                <span className="text-neutral-300 text-sm">{provider.name}</span>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            size="lg"
+            onClick={handleGetStarted}
+            disabled={isLoading}
+            className="bg-blue-500 hover:bg-blue-600 text-white text-lg px-8 py-6 h-auto"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                CONNEXION EN COURS...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                COMMENCER MAINTENANT
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            )}
+          </Button>
         </div>
-      </div>
+      </section>
 
-      {/* Mobile Overlay */}
-      {!sidebarCollapsed && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarCollapsed(true)} />
-      )}
+      {/* Features Section */}
+      <section className="relative z-10 px-6 py-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-white mb-4">Fonctionnalités Principales</h2>
+            <p className="text-neutral-400">Tout ce dont vous avez besoin pour gérer vos transferts d'argent</p>
+          </div>
 
-      {/* Main Content */}
-      <div className={`flex-1 flex flex-col ${!sidebarCollapsed ? "md:ml-0" : ""}`}>
-        {/* Top Toolbar */}
-        <div className="h-16 bg-neutral-800 border-b border-neutral-700 flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-neutral-400">
-              TACTICAL COMMAND / <span className="text-orange-500">OVERVIEW</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
+              <Card key={index} className="bg-neutral-900 border-neutral-700 hover:border-blue-500/50 transition-colors">
+                <CardHeader className="text-center pb-4">
+                  <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <feature.icon className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-white">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-neutral-400 text-sm text-center">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="relative z-10 px-6 py-20 bg-neutral-900/50">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl font-bold text-blue-500 mb-2">{stat.value}</div>
+                <div className="text-neutral-400 text-sm">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative z-10 px-6 py-20">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Prêt à Commencer ?</h2>
+          <p className="text-neutral-400 mb-8">
+            Rejoignez des milliers d'utilisateurs qui font confiance à Sky Pay pour leurs transferts d'argent
+          </p>
+          <Button
+            size="lg"
+            onClick={handleGetStarted}
+            disabled={isLoading}
+            className="bg-blue-500 hover:bg-blue-600 text-white text-lg px-8 py-6 h-auto"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                CONNEXION...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                ACCÉDER AU DASHBOARD
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            )}
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-neutral-800 px-6 py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+              <Shield className="w-4 h-4 text-white" />
             </div>
+            <span className="text-white font-bold">SKY PAY</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xs text-neutral-500">LAST UPDATE: 05/06/2025 20:00 UTC</div>
-            <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-orange-500">
-              <Bell className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-orange-500">
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          </div>
+          <p className="text-neutral-400 text-sm">
+            © 2025 Sky Pay. Tous droits réservés. Transfert d'argent sécurisé.
+          </p>
         </div>
-
-        {/* Dashboard Content */}
-        <div className="flex-1 overflow-auto">
-          {activeSection === "overview" && <CommandCenterPage />}
-          {activeSection === "agents" && <AgentNetworkPage />}
-          {activeSection === "operations" && <OperationsPage />}
-          {activeSection === "intelligence" && <IntelligencePage />}
-          {activeSection === "systems" && <SystemsPage />}
-        </div>
-      </div>
+      </footer>
     </div>
   )
 }
