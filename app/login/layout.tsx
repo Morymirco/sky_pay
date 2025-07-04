@@ -12,7 +12,7 @@ export default function LoginLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-background text-foreground font-mono antialiased">
+      <body className="bg-background text-foreground antialiased">
         {children}
       </body>
     </html>
