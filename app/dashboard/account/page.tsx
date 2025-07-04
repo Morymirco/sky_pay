@@ -54,7 +54,7 @@ export default function AccountPage() {
       case "ajout_editer": return "bg-blue-500/20 text-blue-400"
       case "ajout": return "bg-green-500/20 text-green-400"
       case "confirmer": return "bg-purple-500/20 text-purple-400"
-      default: return "bg-neutral-500/20 text-neutral-400"
+      default: return "bg-neutral-500/20 text-muted-foreground"
     }
   }
 
@@ -80,10 +80,10 @@ export default function AccountPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wider">GESTION DE COMPTE</h1>
-          <p className="text-sm text-neutral-400">Gérez les utilisateurs et les rôles</p>
+          <h1 className="text-2xl font-bold text-foreground tracking-wider">GESTION DE COMPTE</h1>
+          <p className="text-sm text-muted-foreground">Gérez les utilisateurs et les rôles</p>
         </div>
-        <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+        <Button className="bg-blue-500 hover:bg-blue-600 text-foreground">
           <Plus className="w-4 h-4 mr-2" />
           Nouvel Utilisateur
           </Button>
@@ -91,24 +91,24 @@ export default function AccountPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-neutral-900 border-neutral-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-neutral-400 tracking-wider">TOTAL UTILISATEURS</p>
-                <p className="text-2xl font-bold text-white font-mono">{users.length}</p>
+                <p className="text-xs text-muted-foreground tracking-wider">TOTAL UTILISATEURS</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{users.length}</p>
               </div>
               <User className="w-8 h-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-900 border-neutral-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-neutral-400 tracking-wider">UTILISATEURS ACTIFS</p>
-                <p className="text-2xl font-bold text-white font-mono">
+                <p className="text-xs text-muted-foreground tracking-wider">UTILISATEURS ACTIFS</p>
+                <p className="text-2xl font-bold text-foreground font-mono">
                   {users.filter(u => u.status === "active").length}
                 </p>
               </div>
@@ -119,12 +119,12 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-900 border-neutral-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-neutral-400 tracking-wider">ADMINISTRATEURS</p>
-                <p className="text-2xl font-bold text-white font-mono">
+                <p className="text-xs text-muted-foreground tracking-wider">ADMINISTRATEURS</p>
+                <p className="text-2xl font-bold text-foreground font-mono">
                   {users.filter(u => u.role === "admin").length}
                 </p>
               </div>
@@ -135,35 +135,35 @@ export default function AccountPage() {
       </div>
 
       {/* Users Table */}
-      <Card className="bg-neutral-900 border-neutral-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-neutral-300 tracking-wider">LISTE DES UTILISATEURS</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground tracking-wider">LISTE DES UTILISATEURS</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-neutral-700">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">UTILISATEUR</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">EMAIL</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">RÔLE</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">STATUT</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">DERNIÈRE CONNEXION</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-neutral-400 tracking-wider">ACTIONS</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">UTILISATEUR</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">EMAIL</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÔLE</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DERNIÈRE CONNEXION</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-neutral-800 hover:bg-neutral-800 transition-colors"
+                    className="table-row-hover"
                   >
                     <td className="py-3 px-4">
-                      <div className="text-sm text-white font-medium">{user.username}</div>
-                      <div className="text-xs text-neutral-400">ID: {user.id}</div>
+                      <div className="text-sm text-foreground font-medium">{user.username}</div>
+                      <div className="text-xs text-muted-foreground">ID: {user.id}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-neutral-300">{user.email}</span>
+                      <span className="text-sm text-foreground">{user.email}</span>
                     </td>
                     <td className="py-3 px-4">
                       <Badge className={getRoleColor(user.role)}>
@@ -176,7 +176,7 @@ export default function AccountPage() {
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-neutral-300">
+                      <span className="text-sm text-foreground">
                         {new Date(user.lastLogin).toLocaleString('fr-FR')}
                       </span>
                     </td>
@@ -185,7 +185,7 @@ export default function AccountPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-neutral-400 hover:text-blue-500"
+                          className="edit-button-hover button-hover"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -193,7 +193,7 @@ export default function AccountPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-neutral-400 hover:text-red-500"
+                          className="delete-button-hover button-hover"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -208,34 +208,34 @@ export default function AccountPage() {
       </Card>
 
       {/* Roles Information */}
-      <Card className="bg-neutral-900 border-neutral-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-neutral-300 tracking-wider">INFORMATION SUR LES RÔLES</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground tracking-wider">INFORMATION SUR LES RÔLES</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Badge className="bg-red-500/20 text-red-400">Administrateur</Badge>
-                <span className="text-sm text-neutral-400">Accès complet à toutes les fonctionnalités</span>
+                <span className="text-sm text-muted-foreground">Accès complet à toutes les fonctionnalités</span>
               </div>
               <div className="flex items-center gap-3">
                 <Badge className="bg-orange-500/20 text-orange-400">Ajout + Éditer + Supprimer</Badge>
-                <span className="text-sm text-neutral-400">Peut ajouter, modifier et supprimer des données</span>
+                <span className="text-sm text-muted-foreground">Peut ajouter, modifier et supprimer des données</span>
               </div>
               <div className="flex items-center gap-3">
                 <Badge className="bg-blue-500/20 text-blue-400">Ajout + Éditer</Badge>
-                <span className="text-sm text-neutral-400">Peut ajouter et modifier des données</span>
+                <span className="text-sm text-muted-foreground">Peut ajouter et modifier des données</span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Badge className="bg-green-500/20 text-green-400">Ajout</Badge>
-                <span className="text-sm text-neutral-400">Peut uniquement ajouter des données</span>
+                <span className="text-sm text-muted-foreground">Peut uniquement ajouter des données</span>
               </div>
               <div className="flex items-center gap-3">
                 <Badge className="bg-purple-500/20 text-purple-400">Confirmer Paiement</Badge>
-                <span className="text-sm text-neutral-400">Peut confirmer les paiements</span>
+                <span className="text-sm text-muted-foreground">Peut confirmer les paiements</span>
               </div>
             </div>
           </div>

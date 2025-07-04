@@ -92,3 +92,50 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom hover effects for tables */
+@layer components {
+  .table-row-hover {
+    @apply border-b border-border hover:bg-muted/50 hover:shadow-sm transition-all duration-200 cursor-pointer;
+  }
+  
+  .table-row-hover:hover {
+    transform: translateY(-1px);
+  }
+  
+  .action-button-hover {
+    @apply text-muted-foreground transition-colors duration-200;
+  }
+  
+  .action-button-hover:hover {
+    @apply shadow-sm;
+  }
+  
+  .edit-button-hover {
+    @apply text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors duration-200;
+  }
+  
+  .delete-button-hover {
+    @apply text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors duration-200;
+  }
+  
+  /* Smooth transitions for theme switching */
+  * {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  
+  /* Enhanced focus states */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-background;
+  }
+  
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:scale-[1.02];
+  }
+  
+  /* Button hover effects */
+  .button-hover {
+    @apply transition-all duration-200 hover:shadow-sm active:scale-95;
+  }
+}

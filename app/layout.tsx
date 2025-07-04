@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'Tactical Operations Dashboard',
-  description: 'Tactical command and control system',
-    generator: 'v0.dev'
+  title: 'Sky Pay - Transfert d\'argent',
+  description: 'Solution de transfert d\'argent sécurisée',
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -13,9 +14,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <body className="bg-black text-white font-mono antialiased">
-        {children}
+    <html lang="fr" suppressHydrationWarning>
+      <body className="font-mono antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

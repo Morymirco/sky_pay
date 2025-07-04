@@ -5,6 +5,7 @@ import { ArrowRight, Shield, CreditCard, Users, TrendingUp, CheckCircle, Star } 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -30,7 +31,7 @@ export default function LandingPage() {
     },
     {
       icon: Users,
-      title: "Gestion des Membres",
+      title: "Gestion des Bénéficiaires",
       description: "Gérez facilement vos listes de bénéficiaires avec import/export Excel"
     },
     {
@@ -54,7 +55,7 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -71,37 +72,40 @@ export default function LandingPage() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-wider">SKY PAY</h1>
-            <p className="text-xs text-neutral-400">Transfert d'argent sécurisé</p>
+            <h1 className="text-xl font-bold text-foreground tracking-wider">SKY PAY</h1>
+            <p className="text-xs text-muted-foreground">Transfert d'argent sécurisé</p>
           </div>
         </div>
-        <Button
-          onClick={handleGetStarted}
-          disabled={isLoading}
-          className="bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          {isLoading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              CONNEXION...
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              ACCÉDER
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          )}
-        </Button>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Button
+            onClick={handleGetStarted}
+            disabled={isLoading}
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                CONNEXION...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                ACCÉDER
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            )}
+          </Button>
+        </div>
       </nav>
 
       {/* Hero Section */}
       <section className="relative z-10 text-center px-6 py-20">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight">
             Transfert d'Argent
             <span className="text-blue-500 block">Simplifié</span>
           </h1>
-          <p className="text-xl text-neutral-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Envoyez de l'argent en toute sécurité vers les comptes Kulu, Soutra Money et Orange Money. 
             Gestion complète de vos bénéficiaires et suivi de vos transactions.
           </p>
@@ -111,7 +115,7 @@ export default function LandingPage() {
             {providers.map((provider) => (
               <div key={provider.name} className="flex items-center gap-2">
                 <div className={`w-3 h-3 ${provider.color} rounded-full`}></div>
-                <span className="text-neutral-300 text-sm">{provider.name}</span>
+                <span className="text-muted-foreground text-sm">{provider.name}</span>
               </div>
             ))}
           </div>
@@ -141,21 +145,21 @@ export default function LandingPage() {
       <section className="relative z-10 px-6 py-20">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-white mb-4">Fonctionnalités Principales</h2>
-            <p className="text-neutral-400">Tout ce dont vous avez besoin pour gérer vos transferts d'argent</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">Fonctionnalités Principales</h2>
+            <p className="text-muted-foreground">Tout ce dont vous avez besoin pour gérer vos transferts d'argent</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-neutral-900 border-neutral-700 hover:border-blue-500/50 transition-colors">
+              <Card key={index} className="border-border hover:border-blue-500/50 transition-colors">
                 <CardHeader className="text-center pb-4">
                   <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                     <feature.icon className="w-6 h-6 text-blue-500" />
                   </div>
-                  <CardTitle className="text-lg font-bold text-white">{feature.title}</CardTitle>
+                  <CardTitle className="text-lg font-bold text-foreground">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-neutral-400 text-sm text-center">{feature.description}</p>
+                  <p className="text-muted-foreground text-sm text-center">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -164,13 +168,13 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="relative z-10 px-6 py-20 bg-neutral-900/50">
+      <section className="relative z-10 px-6 py-20 bg-muted/50">
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-3xl font-bold text-blue-500 mb-2">{stat.value}</div>
-                <div className="text-neutral-400 text-sm">{stat.label}</div>
+                <div className="text-muted-foreground text-sm">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -180,8 +184,8 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section className="relative z-10 px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Prêt à Commencer ?</h2>
-          <p className="text-neutral-400 mb-8">
+          <h2 className="text-3xl font-bold text-foreground mb-4">Prêt à Commencer ?</h2>
+          <p className="text-muted-foreground mb-8">
             Rejoignez des milliers d'utilisateurs qui font confiance à Sky Pay pour leurs transferts d'argent
           </p>
           <Button
@@ -206,15 +210,15 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-neutral-800 px-6 py-8">
+      <footer className="relative z-10 border-t border-border px-6 py-8">
         <div className="max-w-4xl mx-auto text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            <span className="text-white font-bold">SKY PAY</span>
+            <span className="text-foreground font-bold">SKY PAY</span>
           </div>
-          <p className="text-neutral-400 text-sm">
+          <p className="text-muted-foreground text-sm">
             © 2025 Sky Pay. Tous droits réservés. Transfert d'argent sécurisé.
           </p>
         </div>
