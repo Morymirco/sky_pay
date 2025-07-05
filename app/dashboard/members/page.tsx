@@ -263,10 +263,7 @@ export default function MembersPage() {
             </DialogContent>
           </Dialog>
 
-          <Button variant="outline" className="border-border text-muted-foreground">
-            <Upload className="w-4 h-4 mr-2" />
-            Import Excel
-          </Button>
+
           <Button variant="outline" onClick={exportToExcel} className="border-border text-muted-foreground">
             <Download className="w-4 h-4 mr-2" />
             Export Excel

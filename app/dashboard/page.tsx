@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare } from "lucide-react"
+import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import MembersPage from "./members/page"
+import ImportMembersPage from "./members/import/page"
 import InitiatePaymentPage from "./payments/initiate/page"
 import VerifyPaymentPage from "./payments/verify/page"
 import ValidatePaymentPage from "./payments/validate/page"
@@ -16,6 +17,7 @@ import AccountPage from "./account/page"
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState("home")
   const [paymentsSubmenu, setPaymentsSubmenu] = useState(false)
+  const [membersSubmenu, setMembersSubmenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const handleLogout = () => {
@@ -45,10 +47,17 @@ export default function Dashboard() {
     { id: "validate", icon: Shield, label: "VALIDER LE PAIEMENT" },
   ]
 
+  const membersSubItems = [
+    { id: "members-list", icon: Users, label: "LISTE DES BÉNÉFICIAIRES" },
+    { id: "members-import", icon: Upload, label: "IMPORTER DES BÉNÉFICIAIRES" },
+  ]
+
   const getSectionTitle = () => {
     switch (activeSection) {
       case "home": return "ACCUEIL"
       case "members": return "GESTION DES BÉNÉFICIAIRES"
+      case "members-list": return "LISTE DES BÉNÉFICIAIRES"
+      case "members-import": return "IMPORTER DES BÉNÉFICIAIRES"
       case "initiate": return "INITIER LE PAIEMENT"
       case "verify": return "VÉRIFIER LE PAIEMENT"
       case "validate": return "VALIDER LE PAIEMENT"
@@ -196,7 +205,7 @@ export default function Dashboard() {
     <div className="flex h-screen">
       {/* Sidebar */}
       <div
-        className={`${sidebarCollapsed ? "w-16" : "w-70"} bg-card border-r border-border transition-all duration-300 fixed md:relative z-50 md:z-auto h-full md:h-auto ${!sidebarCollapsed ? "md:block" : ""}`}
+        className={`${sidebarCollapsed ? "w-16" : "w-70"} bg-muted border-r border-border transition-all duration-300 fixed md:relative z-50 md:z-auto h-full md:h-auto ${!sidebarCollapsed ? "md:block" : ""} relative`}
       >
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
@@ -217,47 +226,46 @@ export default function Dashboard() {
           </div>
 
           <nav className="space-y-2">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-colors ${
-                  activeSection === item.id
-                    ? "bg-blue-500 text-white"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <item.icon className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-              </button>
-            ))}
+            {/* Accueil */}
+            <button
+              key="home"
+              onClick={() => setActiveSection("home")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                activeSection === "home"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <Home className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-sm font-medium">ACCUEIL</span>}
+            </button>
 
-            {/* Payments Submenu */}
+            {/* Gestion des bénéficiaires - Sous-menu */}
             <div className="space-y-1">
               <button
-                onClick={() => setPaymentsSubmenu(!paymentsSubmenu)}
-                className={`w-full flex items-center justify-between p-3 rounded transition-colors ${
-                  activeSection.startsWith("initiate") || activeSection.startsWith("verify") || activeSection.startsWith("validate")
-                    ? "bg-blue-500 text-white"
+                onClick={() => setMembersSubmenu(!membersSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  activeSection.startsWith("members-")
+                    ? "bg-blue-500 text-white shadow-lg"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium">PAYER LES BÉNÉFICIAIRES</span>}
+                  <Users className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium">GESTION DES BÉNÉFICIAIRES</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <ChevronDown className={`w-4 h-4 transition-transform ${paymentsSubmenu ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform ${membersSubmenu ? "rotate-180" : ""}`} />
                 )}
               </button>
               
-              {paymentsSubmenu && !sidebarCollapsed && (
+              {membersSubmenu && !sidebarCollapsed && (
                 <div className="ml-6 space-y-1">
-                  {paymentsSubItems.map((item) => (
+                  {membersSubItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveSection(item.id)}
-                      className={`w-full flex items-center gap-3 p-2 rounded transition-colors text-sm ${
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-sm ${
                         activeSection === item.id
                           ? "bg-blue-500/20 text-blue-500"
                           : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -270,8 +278,76 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* Payments Submenu placé ici */}
+            <div className="space-y-1">
+              <button
+                onClick={() => setPaymentsSubmenu(!paymentsSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  activeSection.startsWith("initiate") || activeSection.startsWith("verify") || activeSection.startsWith("validate")
+                    ? "bg-blue-500 text-white shadow-lg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-sm font-medium">PAYER LES BÉNÉFICIAIRES</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform ${paymentsSubmenu ? "rotate-180" : ""}`} />
+                )}
+              </button>
+              {paymentsSubmenu && !sidebarCollapsed && (
+                <div className="ml-6 space-y-1">
+                  {paymentsSubItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-sm ${
+                        activeSection === item.id
+                          ? "bg-blue-500/20 text-blue-500"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Historique */}
+            <button
+              key="history"
+              onClick={() => setActiveSection("history")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                activeSection === "history"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <History className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-sm font-medium">HISTORIQUE</span>}
+            </button>
+
+            {/* Gestion de compte */}
+            <button
+              key="account"
+              onClick={() => setActiveSection("account")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                activeSection === "account"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-sm font-medium">GESTION DE COMPTE</span>}
+            </button>
           </nav>
 
+          {/* Section SYSTÈME ACTIF - Indicateur de santé et statistiques en temps réel */}
+          {/* Masquée temporairement
           {!sidebarCollapsed && (
             <div className="mt-8 p-4 bg-muted border border-border rounded">
               <div className="flex items-center gap-2 mb-2">
@@ -285,10 +361,11 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+          */}
 
-          {/* Logout Button */}
+          {/* Logout Button - Positionné en bas de la sidebar */}
           {!sidebarCollapsed && (
-            <div className="mt-4">
+            <div className="absolute bottom-4 left-4 right-4">
               <Button
                 variant="outline"
                 onClick={handleLogout}
@@ -338,13 +415,32 @@ export default function Dashboard() {
 
         {/* Dashboard Content */}
         <div className="flex-1 overflow-auto">
-          {activeSection === "home" && <HomePage />}
-          {activeSection === "members" && <MembersPage />}
-          {activeSection === "initiate" && <InitiatePaymentPage />}
-          {activeSection === "verify" && <VerifyPaymentPage />}
-          {activeSection === "validate" && <ValidatePaymentPage />}
-          {activeSection === "history" && <HistoryPage />}
-          {activeSection === "account" && <AccountPage />}
+          <div className="relative">
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "home" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "home" && <HomePage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "members-list" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "members-list" && <MembersPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "members-import" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "members-import" && <ImportMembersPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "initiate" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "initiate" && <InitiatePaymentPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "verify" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "verify" && <VerifyPaymentPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "validate" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "validate" && <ValidatePaymentPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "history" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "history" && <HistoryPage />}
+            </div>
+            <div className={`transition-all duration-300 ease-in-out ${activeSection === "account" ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4 absolute inset-0"}`}>
+              {activeSection === "account" && <AccountPage />}
+            </div>
+          </div>
         </div>
       </div>
     </div>
