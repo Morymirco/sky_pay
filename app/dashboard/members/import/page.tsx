@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Upload, Download, FileSpreadsheet, Users, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 
 interface ImportedMember {
   name: string
@@ -19,13 +19,23 @@ interface ImportedMember {
 export default function ImportMembersPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [importedData, setImportedData] = useState<ImportedMember[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [importStatus, setImportStatus] = useState<{
     success: number
     errors: number
     total: number
   }>({ success: 0, errors: 0, total: 0 })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(importedData.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentData = importedData.slice(startIndex, endIndex)
 
   const downloadTemplate = () => {
     // Créer un fichier Excel avec des données d'exemple
@@ -81,14 +91,12 @@ export default function ImportMembersPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      console.log("Fichier sélectionné:", file.name, file.type)
       setSelectedFile(file)
       
       const reader = new FileReader()
       reader.onload = (e) => {
         try {
           const text = e.target?.result as string
-          console.log("Contenu du fichier:", text.substring(0, 200) + "...")
           
           const lines = text.split('\n').filter(line => line.trim() !== '')
           if (lines.length < 2) {
@@ -97,7 +105,6 @@ export default function ImportMembersPage() {
           }
           
           const headers = lines[0].split(',').map(h => h.trim())
-          console.log("En-têtes détectés:", headers)
           
           const data = lines.slice(1).map((line, index) => {
             const values = line.split(',').map(v => v.trim())
@@ -111,17 +118,14 @@ export default function ImportMembersPage() {
             }
           }).filter(item => item.name && item.email && item.phone && item.accountNumber)
           
-          console.log("Données parsées:", data.length, "lignes valides")
           setImportedData(data)
           setShowPreview(true)
         } catch (error) {
-          console.error("Erreur lors du parsing:", error)
           alert("Erreur lors de la lecture du fichier. Vérifiez le format.")
         }
       }
       
       reader.onerror = () => {
-        console.error("Erreur de lecture du fichier")
         alert("Erreur lors de la lecture du fichier.")
       }
       
@@ -138,8 +142,17 @@ export default function ImportMembersPage() {
       setImportStatus({ success, errors, total: success + errors })
       setIsProcessing(false)
       setShowPreview(false)
+      setShowSuccess(true)
       setImportedData([])
+      setSelectedFile(null)
+      setCurrentPage(1)
     }, 2000)
+  }
+
+  const handleSuccessClose = () => {
+    setShowSuccess(false)
+    // Rediriger vers la liste des bénéficiaires
+    window.location.href = '/dashboard/members'
   }
 
   const getProviderColor = (provider: string) => {
@@ -203,28 +216,40 @@ export default function ImportMembersPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-green-500 transition-colors">
+            <div 
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.currentTarget.style.borderColor = '#10b981'
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                e.currentTarget.style.borderColor = ''
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                const files = e.dataTransfer.files
+                if (files.length > 0) {
+                  handleFileUpload({ target: { files } } as any)
+                }
+              }}
+            >
               <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Glissez votre fichier Excel ici</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 ou cliquez sur le bouton ci-dessous pour sélectionner un fichier (.xlsx, .xls, .csv)
               </p>
               <input
+                ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.xls,.csv"
                 onChange={handleFileUpload}
                 className="hidden"
-                id="file-upload"
-                ref={(input) => {
-                  if (input) {
-                    input.onclick = () => console.log("Input cliqué")
-                  }
-                }}
               />
               <Button 
                 onClick={() => {
-                  console.log("Bouton cliqué")
-                  document.getElementById('file-upload')?.click()
+                  fileInputRef.current?.click()
                 }}
                 className="bg-green-500 hover:bg-green-600"
               >
@@ -293,8 +318,8 @@ export default function ImportMembersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {importedData.slice(0, 10).map((member, index) => (
-                    <tr key={index} className="border-b border-border hover:bg-muted/50">
+                  {currentData.map((member, index) => (
+                    <tr key={startIndex + index} className="border-b border-border hover:bg-muted/50">
                       <td className="py-2 px-4 text-sm text-foreground">{member.name}</td>
                       <td className="py-2 px-4 text-sm text-foreground">{member.email}</td>
                       <td className="py-2 px-4 text-sm text-foreground">{member.phone}</td>
@@ -313,12 +338,63 @@ export default function ImportMembersPage() {
                   ))}
                 </tbody>
               </table>
-              {importedData.length > 10 && (
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  ... et {importedData.length - 10} autres bénéficiaires
-                </p>
-              )}
             </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Page {currentPage} sur {totalPages} ({importedData.length} bénéficiaires)
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Précédent
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const page = i + 1
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      )
+                    })}
+                    {totalPages > 5 && (
+                      <>
+                        <span className="text-muted-foreground">...</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(totalPages)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {totalPages}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Suivant
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowPreview(false)}>
@@ -340,6 +416,40 @@ export default function ImportMembersPage() {
                     Confirmer l'Import
                   </div>
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de succès */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Import réussi
+            </DialogTitle>
+            <DialogDescription>
+              Les bénéficiaires ont été importés avec succès dans votre liste.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                <CheckCircle className="h-4 w-4" />
+                <span className="font-medium">Import terminé</span>
+              </div>
+              <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                <p>• {importStatus.success} bénéficiaires importés avec succès</p>
+                {importStatus.errors > 0 && (
+                  <p>• {importStatus.errors} erreurs détectées</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={handleSuccessClose}>
+                Voir la liste
               </Button>
             </div>
           </div>
