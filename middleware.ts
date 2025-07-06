@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// MIDDLEWARE DÉSACTIVÉ POUR SIMPLIFIER L'AUTHENTIFICATION
 // Routes publiques qui ne nécessitent pas d'authentification
 const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
 
@@ -12,6 +13,11 @@ const protectedRoutes = {
 }
 
 export function middleware(request: NextRequest) {
+  // MIDDLEWARE DÉSACTIVÉ - LAISSE PASSER TOUT
+  return NextResponse.next()
+  
+  // CODE ORIGINAL COMMENTÉ
+  /*
   const { pathname } = request.nextUrl
   
   // Vérifier si c'est une route publique
@@ -44,6 +50,7 @@ export function middleware(request: NextRequest) {
   }
 
   return NextResponse.next()
+  */
 }
 
 export const config = {

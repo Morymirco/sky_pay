@@ -1,17 +1,41 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Building, Wallet, Users, FileText, CheckCircle, CheckSquare } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 export default function Dashboard() {
-  // Simple auth check - redirect to login if not authenticated
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem("sky_pay_auth_token")
-    if (!token && window.location.pathname !== "/login") {
-      window.location.href = "/login"
-      return null
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Vérification d'authentification améliorée
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("sky_pay_auth_token")
+      if (!token) {
+        window.location.href = "/login"
+        return
+      }
+      setIsAuthenticated(true)
+      setIsLoading(false)
     }
+
+    checkAuth()
+  }, [])
+
+  // Afficher un loader pendant la vérification
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  // Si pas authentifié, ne rien afficher (redirection en cours)
+  if (!isAuthenticated) {
+    return null
   }
 
   return (

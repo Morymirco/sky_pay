@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,10 +15,19 @@ export default function LoginPage() {
   })
   const [error, setError] = useState("")
 
+  // Vérifier si l'utilisateur est déjà connecté
+  useEffect(() => {
+    const token = localStorage.getItem("sky_pay_auth_token")
+    if (token) {
+      window.location.href = "/dashboard"
+    }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
