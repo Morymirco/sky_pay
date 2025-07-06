@@ -278,7 +278,7 @@ export default function DashboardLayout({
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
-              <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              <User className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
               {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
             </button>
 
@@ -291,7 +291,7 @@ export default function DashboardLayout({
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
-              <Key className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
               {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
             </button>
           </nav>
