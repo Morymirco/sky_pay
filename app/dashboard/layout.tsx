@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -15,6 +15,21 @@ export default function DashboardLayout({
   const [membersSubmenu, setMembersSubmenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
+
+  // Gérer automatiquement l'ouverture des sous-menus selon la page active
+  useEffect(() => {
+    if (pathname.startsWith("/dashboard/members")) {
+      setMembersSubmenu(true)
+    } else {
+      setMembersSubmenu(false)
+    }
+    
+    if (pathname.startsWith("/dashboard/payments")) {
+      setPaymentsSubmenu(true)
+    } else {
+      setPaymentsSubmenu(false)
+    }
+  }, [pathname])
 
   const handleLogout = () => {
     localStorage.removeItem("sky_pay_auth_token")
@@ -88,7 +103,7 @@ export default function DashboardLayout({
               }`}
             >
               <Home className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-              {!sidebarCollapsed && <span className="text-sm font-medium">ACCUEIL</span>}
+              {!sidebarCollapsed && <span className="text-xs font-medium">ACCUEIL</span>}
             </button>
 
             {/* Gestion des bénéficiaires - Sous-menu */}
@@ -103,31 +118,31 @@ export default function DashboardLayout({
               >
                 <div className="flex items-center gap-3">
                   <Users className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium">GESTION DES BÉNÉFICIAIRES</span>}
+                  {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DES BÉNÉFICIAIRES</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform ${membersSubmenu ? "rotate-180" : ""}`} />
                 )}
               </button>
               
-              {membersSubmenu && !sidebarCollapsed && (
-                <div className="ml-6 space-y-1">
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                membersSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
                   {membersSubItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => window.location.href = item.href}
-                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-sm ${
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
                         pathname === item.href
                           ? "bg-blue-500/20 text-blue-500"
                           : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="text-xs font-medium">{item.label}</span>
                     </button>
                   ))}
                 </div>
-              )}
             </div>
 
             {/* Payments Submenu placé ici */}
@@ -142,30 +157,30 @@ export default function DashboardLayout({
               >
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                  {!sidebarCollapsed && <span className="text-sm font-medium">PAYER LES BÉNÉFICIAIRES</span>}
+                  {!sidebarCollapsed && <span className="text-xs font-medium">PAYER LES BÉNÉFICIAIRES</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <ChevronDown className={`w-4 h-4 transition-transform ${paymentsSubmenu ? "rotate-180" : ""}`} />
                 )}
               </button>
-              {paymentsSubmenu && !sidebarCollapsed && (
-                <div className="ml-6 space-y-1">
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                paymentsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
                   {paymentsSubItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => window.location.href = item.href}
-                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-sm ${
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
                         pathname === item.href
                           ? "bg-blue-500/20 text-blue-500"
                           : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="text-xs font-medium">{item.label}</span>
                     </button>
                   ))}
                 </div>
-              )}
             </div>
 
             {/* Historique */}
@@ -178,7 +193,7 @@ export default function DashboardLayout({
               }`}
             >
               <History className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-              {!sidebarCollapsed && <span className="text-sm font-medium">HISTORIQUE</span>}
+              {!sidebarCollapsed && <span className="text-xs font-medium">HISTORIQUE</span>}
             </button>
 
             {/* Gestion de compte */}
@@ -191,7 +206,7 @@ export default function DashboardLayout({
               }`}
             >
               <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-              {!sidebarCollapsed && <span className="text-sm font-medium">GESTION DE COMPTE</span>}
+              {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
             </button>
           </nav>
 
