@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload } from "lucide-react"
+import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { usePathname } from "next/navigation"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 
 export default function DashboardLayout({
   children,
@@ -14,7 +17,44 @@ export default function DashboardLayout({
   const [paymentsSubmenu, setPaymentsSubmenu] = useState(false)
   const [membersSubmenu, setMembersSubmenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const pathname = usePathname()
+
+  // Notifications data
+  const [notifications] = useState([
+    {
+      id: 1,
+      type: "success",
+      title: "Paiement validé",
+      message: "Le paiement de 500€ pour le lot #1234 a été validé avec succès.",
+      time: "Il y a 5 minutes",
+      read: false
+    },
+    {
+      id: 2,
+      type: "warning",
+      title: "Demande de rechargement",
+      message: "Nouvelle demande de rechargement de 1000€ en attente de validation.",
+      time: "Il y a 15 minutes",
+      read: false
+    },
+    {
+      id: 3,
+      type: "info",
+      title: "Mise à jour système",
+      message: "Une nouvelle version de l'application est disponible.",
+      time: "Il y a 1 heure",
+      read: true
+    },
+    {
+      id: 4,
+      type: "error",
+      title: "Erreur de connexion",
+      message: "Problème de connexion détecté. Vérifiez votre connexion internet.",
+      time: "Il y a 2 heures",
+      read: true
+    }
+  ])
 
   // Gérer automatiquement l'ouverture des sous-menus selon la page active
   useEffect(() => {
@@ -36,6 +76,38 @@ export default function DashboardLayout({
     window.location.href = "/"
   }
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "success":
+        return <CheckCircle className="w-4 h-4 text-green-500" />
+      case "warning":
+        return <AlertCircle className="w-4 h-4 text-orange-500" />
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-500" />
+      case "info":
+        return <Clock className="w-4 h-4 text-blue-500" />
+      default:
+        return <Bell className="w-4 h-4 text-muted-foreground" />
+    }
+  }
+
+  const getNotificationBadgeColor = (type: string) => {
+    switch (type) {
+      case "success":
+        return "bg-green-500/20 text-green-400"
+      case "warning":
+        return "bg-orange-500/20 text-orange-400"
+      case "error":
+        return "bg-red-500/20 text-red-400"
+      case "info":
+        return "bg-blue-500/20 text-blue-400"
+      default:
+        return "bg-muted text-muted-foreground"
+    }
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
   // Simple auth check - redirect to login if not authenticated
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem("sky_pay_auth_token")
@@ -52,8 +124,9 @@ export default function DashboardLayout({
     if (pathname === "/dashboard/payments/initiate") return "INITIER LE PAIEMENT"
     if (pathname === "/dashboard/payments/verify") return "VÉRIFIER LE PAIEMENT"
     if (pathname === "/dashboard/payments/validate") return "VALIDER LE PAIEMENT"
-    if (pathname === "/dashboard/history") return "HISTORIQUE DES PAIEMENTS"
+    if (pathname === "/dashboard/recharge-requests") return "DEMANDES DE RECHARGEMENT"
     if (pathname === "/dashboard/account") return "GESTION DE COMPTE"
+    if (pathname === "/dashboard/settings") return "PARAMÈTRES"
     return "DASHBOARD"
   }
 
@@ -183,17 +256,17 @@ export default function DashboardLayout({
                 </div>
             </div>
 
-            {/* Historique */}
+            {/* Demandes de Rechargement */}
             <button
-              onClick={() => window.location.href = "/dashboard/history"}
+              onClick={() => window.location.href = "/dashboard/recharge-requests"}
               className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                pathname === "/dashboard/history"
+                pathname === "/dashboard/recharge-requests"
                   ? "bg-blue-500 text-white shadow-lg"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
-              <History className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-              {!sidebarCollapsed && <span className="text-xs font-medium">HISTORIQUE</span>}
+              <RefreshCw className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">DEMANDES DE RECHARGEMENT</span>}
             </button>
 
             {/* Gestion de compte */}
@@ -207,6 +280,19 @@ export default function DashboardLayout({
             >
               <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
               {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
+            </button>
+
+            {/* Paramètres */}
+            <button
+              onClick={() => window.location.href = "/dashboard/settings"}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard/settings"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <Key className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
             </button>
           </nav>
 
@@ -251,8 +337,18 @@ export default function DashboardLayout({
               })}
             </div>
             <ThemeToggle />
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-blue-500">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-muted-foreground hover:text-blue-500 relative"
+              onClick={() => setNotificationsOpen(true)}
+            >
               <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              )}
             </Button>
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-blue-500">
               <RefreshCw className="w-4 h-4" />
@@ -265,6 +361,99 @@ export default function DashboardLayout({
           {children}
         </div>
       </div>
+
+      {/* Notifications Drawer */}
+      <Drawer open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <DrawerContent className="right-0 left-auto w-80">
+          <DrawerHeader className="border-b border-border">
+            <div className="flex items-center justify-between">
+              <DrawerTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-blue-500" />
+                Notifications
+                {unreadCount > 0 && (
+                  <Badge className="bg-blue-500 text-white">
+                    {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </DrawerTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setNotificationsOpen(false)}
+                className="h-8 w-8"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </DrawerHeader>
+          
+          <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Aucune notification</p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 rounded-lg border transition-all duration-200 ${
+                    notification.read 
+                      ? "bg-muted/30 border-muted" 
+                      : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className={`font-medium text-sm ${
+                          notification.read ? "text-muted-foreground" : "text-foreground"
+                        }`}>
+                          {notification.title}
+                        </h4>
+                        <Badge className={`text-xs ${getNotificationBadgeColor(notification.type)}`}>
+                          {notification.type}
+                        </Badge>
+                      </div>
+                      <p className={`text-sm mb-2 ${
+                        notification.read ? "text-muted-foreground" : "text-foreground"
+                      }`}>
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {notification.time}
+                        </span>
+                        {!notification.read && (
+                          <Badge className="bg-blue-500 text-white text-xs">
+                            Nouveau
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          
+          {notifications.length > 0 && (
+            <div className="p-4 border-t border-border">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  Marquer tout comme lu
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1">
+                  Voir toutes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 } 

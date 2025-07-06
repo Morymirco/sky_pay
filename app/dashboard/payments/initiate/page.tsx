@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Play, Users, DollarSign, CreditCard, Download, Upload, Plus, List, FileText, CheckCircle } from "lucide-react"
+import { Play, Users, DollarSign, CreditCard, Download, Upload, Plus, List, FileText, CheckCircle, Eye, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,27 @@ interface PaymentMember {
   status: "pending" | "confirmed" | "completed"
   date: string
   reference: string
+}
+
+interface PaymentBatch {
+  id: string
+  date: string
+  totalAmount: number
+  reference: string
+  status: "pending" | "confirmed" | "completed"
+  beneficiaryCount: number
+  description?: string
+}
+
+interface Beneficiary {
+  id: string
+  name: string
+  provider: "Kulu" | "Soutra Money" | "Orange Money"
+  accountNumber: string
+  email: string
+  phone: string
+  amount: number
+  status: "active" | "inactive"
 }
 
 export default function InitiatePaymentPage() {
@@ -192,6 +213,80 @@ export default function InitiatePaymentPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showImportSuccessModal, setShowImportSuccessModal] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
+  
+  // Modal states
+  const [showBeneficiariesModal, setShowBeneficiariesModal] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState<PaymentBatch | null>(null)
+  
+  // Données des bénéficiaires (simulation - en réalité viendrait de l'API)
+  const [beneficiariesData] = useState<{ [key: string]: Beneficiary[] }>({
+    "PAY-2024-001": [
+      {
+        id: "1",
+        name: "Jean Dupont",
+        provider: "Orange Money",
+        accountNumber: "OM123456789",
+        email: "jean.dupont@email.com",
+        phone: "+33 6 12 34 56 78",
+        amount: 150.00,
+        status: "active"
+      },
+      {
+        id: "2",
+        name: "Marie Martin",
+        provider: "Kulu",
+        accountNumber: "KL987654321",
+        email: "marie.martin@email.com",
+        phone: "+33 6 98 76 54 32",
+        amount: 200.00,
+        status: "active"
+      }
+    ],
+    "PAY-2024-002": [
+      {
+        id: "3",
+        name: "Pierre Durand",
+        provider: "Soutra Money",
+        accountNumber: "SM456789123",
+        email: "pierre.durand@email.com",
+        phone: "+33 6 55 44 33 22",
+        amount: 175.50,
+        status: "active"
+      }
+    ],
+    "PAY-2024-003": [
+      {
+        id: "4",
+        name: "Sophie Bernard",
+        provider: "Orange Money",
+        accountNumber: "OM987654321",
+        email: "sophie.bernard@email.com",
+        phone: "+33 6 11 22 33 44",
+        amount: 225.00,
+        status: "active"
+      },
+      {
+        id: "5",
+        name: "Lucas Moreau",
+        provider: "Kulu",
+        accountNumber: "KL123456789",
+        email: "lucas.moreau@email.com",
+        phone: "+33 6 99 88 77 66",
+        amount: 180.75,
+        status: "active"
+      },
+      {
+        id: "6",
+        name: "Emma Dubois",
+        provider: "Soutra Money",
+        accountNumber: "SM789123456",
+        email: "emma.dubois@email.com",
+        phone: "+33 6 77 66 55 44",
+        amount: 195.25,
+        status: "active"
+      }
+    ]
+  })
   const [beneficiariesList, setBeneficiariesList] = useState([
     {
       id: "1",
@@ -330,14 +425,36 @@ export default function InitiatePaymentPage() {
     }
   ])
 
-  const totalAmount = members.reduce((sum, member) => sum + member.amount, 0)
-  const pendingCount = members.filter(m => m.status === "pending").length
+  // Transformer les membres en lots de paiements
+  const paymentBatches: PaymentBatch[] = members.reduce((batches: PaymentBatch[], member) => {
+    const existingBatch = batches.find(batch => batch.reference === member.reference)
+    
+    if (existingBatch) {
+      existingBatch.totalAmount += member.amount
+      existingBatch.beneficiaryCount += 1
+    } else {
+      batches.push({
+        id: member.reference,
+        date: member.date,
+        totalAmount: member.amount,
+        reference: member.reference,
+        status: member.status,
+        beneficiaryCount: 1,
+        description: `Paiement ${member.reference}`
+      })
+    }
+    
+    return batches
+  }, [])
+
+  const totalAmount = paymentBatches.reduce((sum, batch) => sum + batch.totalAmount, 0)
+  const pendingCount = paymentBatches.filter(b => b.status === "pending").length
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentMembers = members.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(members.length / itemsPerPage)
+  const currentBatches = paymentBatches.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(paymentBatches.length / itemsPerPage)
 
   // Pagination for beneficiaries
   const [currentBeneficiariesPage, setCurrentBeneficiariesPage] = useState(1)
@@ -428,15 +545,15 @@ export default function InitiatePaymentPage() {
 
   const exportToExcel = () => {
     const csvContent = "data:text/csv;charset=utf-8," +
-      "ID,Nom,Fournisseur,Compte,Montant,Date,Référence,Statut\n" +
-      members.map(member => 
-        `${member.id},${member.name},${member.provider},${member.accountNumber},${member.amount}€,${member.date},${member.reference},${member.status}`
+      "Date,Montant Total,Référence,Bénéficiaires,Description,Statut\n" +
+      paymentBatches.map(batch => 
+        `${batch.date},${batch.totalAmount.toFixed(2)}€,${batch.reference},${batch.beneficiaryCount},${batch.description || ''},${batch.status}`
       ).join("\n")
     
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "paiements_inities.csv")
+    link.setAttribute("download", "lots_paiements_inities.csv")
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -539,6 +656,16 @@ export default function InitiatePaymentPage() {
     }
   }
 
+  const handleRowClick = (payment: PaymentBatch) => {
+    setSelectedPayment(payment)
+    setShowBeneficiariesModal(true)
+  }
+
+  const closeModal = () => {
+    setShowBeneficiariesModal(false)
+    setSelectedPayment(null)
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -550,7 +677,7 @@ export default function InitiatePaymentPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
             <Download className="w-4 h-4 mr-2" />
-            Export Excel
+            Export Lots
           </Button>
         </div>
       </div>
@@ -601,7 +728,7 @@ export default function InitiatePaymentPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground tracking-wider">LISTE DES PAIEMENTS</p>
-                <p className="text-sm font-medium text-foreground">{members.length} bénéficiaires</p>
+                <p className="text-sm font-medium text-foreground">{paymentBatches.length} lots</p>
               </div>
               <List className="w-8 h-8 text-purple-500" />
             </div>
@@ -1047,7 +1174,8 @@ export default function InitiatePaymentPage() {
                   <h3 className="text-lg font-semibold">Liste des Paiements Initiés</h3>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
-                  <span className="text-muted-foreground">Total: {totalAmount}€</span>
+                  <span className="text-muted-foreground">Total: {totalAmount.toFixed(2)}€</span>
+                  <span className="text-muted-foreground">Lots: {paymentBatches.length}</span>
                   <span className="text-muted-foreground">En attente: {pendingCount}</span>
                 </div>
                       </div>
@@ -1059,44 +1187,67 @@ export default function InitiatePaymentPage() {
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DATE</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MONTANT INITIÉ</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÉFÉRENCE</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">BÉNÉFICIAIRES</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DESCRIPTION</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentMembers.map((member) => (
+                    {currentBatches.map((batch) => (
                       <tr
-                        key={member.id}
-                        className="table-row-hover"
+                        key={batch.id}
+                        className="table-row-hover cursor-pointer"
+                        onClick={() => handleRowClick(batch)}
                       >
                         <td className="py-3 px-4">
-                          <div className="text-sm text-foreground font-medium">{member.date}</div>
-                          <div className="text-xs text-muted-foreground">{member.name}</div>
+                          <div className="text-sm text-foreground font-medium">{batch.date}</div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-lg font-bold text-foreground">{member.amount}€</div>
-                          <div className="text-xs text-muted-foreground">{member.provider}</div>
+                          <div className="text-lg font-bold text-foreground">{batch.totalAmount.toFixed(2)}€</div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-foreground font-mono">{member.reference}</span>
-                          <div className="text-xs text-muted-foreground">{member.accountNumber}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge className={getStatusColor(member.status)}>
-                        {member.status === "pending" ? "En attente" : 
-                         member.status === "confirmed" ? "Confirmé" : "Terminé"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          <span className="text-sm text-foreground font-mono">{batch.reference}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-foreground">{batch.beneficiaryCount}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-foreground">{batch.description}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge className={getStatusColor(batch.status)}>
+                            {batch.status === "pending" ? "En attente" : 
+                             batch.status === "confirmed" ? "Confirmé" : "Terminé"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRowClick(batch)
+                            }}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div className="text-sm text-muted-foreground">
-                    Affichage {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, members.length)} sur {members.length} paiements
+                    Affichage {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, paymentBatches.length)} sur {paymentBatches.length} lots de paiements
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1137,6 +1288,100 @@ export default function InitiatePaymentPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal des Bénéficiaires */}
+      <Dialog open={showBeneficiariesModal} onOpenChange={setShowBeneficiariesModal}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              Bénéficiaires du Lot de Paiement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 overflow-hidden">
+            {selectedPayment && (
+              <>
+                {/* Informations du lot */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Référence</div>
+                    <div className="text-sm font-medium">{selectedPayment.reference}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Montant Total</div>
+                    <div className="text-sm font-medium">{selectedPayment.totalAmount.toFixed(2)}€</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Bénéficiaires</div>
+                    <div className="text-sm font-medium">{selectedPayment.beneficiaryCount}</div>
+                  </div>
+                </div>
+
+                {/* Liste des bénéficiaires */}
+                <div className="overflow-y-auto max-h-96">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">BÉNÉFICIAIRE</th>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">FOURNISSEUR</th>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">COMPTE</th>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">CONTACT</th>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MONTANT</th>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(beneficiariesData[selectedPayment.reference] || []).map((beneficiary) => (
+                        <tr key={beneficiary.id} className="border-b border-border/50">
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-foreground font-medium">{beneficiary.name}</div>
+                            <div className="text-xs text-muted-foreground">ID: {beneficiary.id}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={getProviderColor(beneficiary.provider)}>
+                              {beneficiary.provider}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-sm text-foreground font-mono">{beneficiary.accountNumber}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-foreground">{beneficiary.email}</div>
+                            <div className="text-xs text-muted-foreground">{beneficiary.phone}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm font-medium text-foreground">{beneficiary.amount.toFixed(2)}€</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={getStatusColor(beneficiary.status)}>
+                              {beneficiary.status === "active" ? "Actif" : "Inactif"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Message si aucun bénéficiaire */}
+                {(!beneficiariesData[selectedPayment.reference] || beneficiariesData[selectedPayment.reference].length === 0) && (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">Aucun bénéficiaire trouvé pour ce lot de paiement.</p>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="flex justify-end pt-4 border-t border-border">
+              <Button onClick={closeModal}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Succès */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>

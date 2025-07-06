@@ -12,9 +12,9 @@ export default function Dashboard() {
   // Vérification d'authentification améliorée
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem("sky_pay_auth_token")
+    const token = localStorage.getItem("sky_pay_auth_token")
       if (!token) {
-        window.location.href = "/login"
+      window.location.href = "/login"
         return
       }
       setIsAuthenticated(true)
@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   // Si pas authentifié, ne rien afficher (redirection en cours)
   if (!isAuthenticated) {
-    return null
+      return null
   }
 
   return (

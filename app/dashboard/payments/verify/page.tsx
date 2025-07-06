@@ -41,36 +41,36 @@ export default function VerifyPaymentPage() {
   // Données des bénéficiaires (simulation - en réalité viendrait de l'API)
   const [beneficiariesData] = useState<{ [key: string]: Beneficiary[] }>({
     "PAY-2024-001": [
-      {
-        id: "1",
-        name: "Jean Dupont",
-        provider: "Orange Money",
-        accountNumber: "OM123456789",
+    {
+      id: "1",
+      name: "Jean Dupont",
+      provider: "Orange Money",
+      accountNumber: "OM123456789",
         email: "jean.dupont@email.com",
         phone: "+33 6 12 34 56 78",
-        amount: 150.00,
+      amount: 150.00,
         status: "active"
-      },
-      {
-        id: "2",
-        name: "Marie Martin",
-        provider: "Kulu",
-        accountNumber: "KL987654321",
+    },
+    {
+      id: "2",
+      name: "Marie Martin",
+      provider: "Kulu",
+      accountNumber: "KL987654321",
         email: "marie.martin@email.com",
         phone: "+33 6 98 76 54 32",
-        amount: 200.00,
+      amount: 200.00,
         status: "active"
       }
     ],
     "PAY-2024-002": [
-      {
-        id: "3",
-        name: "Pierre Durand",
-        provider: "Soutra Money",
-        accountNumber: "SM456789123",
+    {
+      id: "3",
+      name: "Pierre Durand",
+      provider: "Soutra Money",
+      accountNumber: "SM456789123",
         email: "pierre.durand@email.com",
         phone: "+33 6 55 44 33 22",
-        amount: 175.50,
+      amount: 175.50,
         status: "active"
       }
     ],
@@ -326,9 +326,9 @@ export default function VerifyPaymentPage() {
             Export En Attente
           </Button>
           <Button variant="outline" onClick={() => exportToExcel('verified')}>
-            <Download className="w-4 h-4 mr-2" />
+          <Download className="w-4 h-4 mr-2" />
             Export Vérifiés
-          </Button>
+        </Button>
         </div>
       </div>
 
@@ -398,44 +398,44 @@ export default function VerifyPaymentPage() {
                 </div>
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DATE</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MONTANT INITIÉ</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÉFÉRENCE</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">BÉNÉFICIAIRES</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DESCRIPTION</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
                     {currentPendingPayments.map((payment) => (
                       <tr 
                         key={payment.id} 
                         className="table-row-hover cursor-pointer hover:bg-muted/50"
                         onClick={() => handleRowClick(payment)}
                       >
-                        <td className="py-3 px-4">
+                    <td className="py-3 px-4">
                           <div className="text-sm text-foreground font-medium">{payment.date}</div>
-                        </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
                           <div className="text-lg font-bold text-foreground">{payment.totalAmount}€</div>
-                        </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
                           <span className="text-sm text-foreground font-mono">{payment.reference}</span>
-                        </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4 text-blue-500" />
                             <span className="text-sm text-foreground">{payment.beneficiaryCount}</span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
                           <div className="text-sm text-foreground">{payment.description}</div>
-                        </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button 
                               size="sm" 
@@ -443,16 +443,16 @@ export default function VerifyPaymentPage() {
                               onClick={() => handleCancel(payment.id)} 
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <X className="w-4 h-4 mr-1" /> Annuler
-                            </Button>
+                            <X className="w-4 h-4 mr-1" /> Annuler
+                          </Button>
                             <Button 
                               size="sm" 
                               onClick={() => handleValidate(payment.id)} 
                               className="bg-green-600 hover:bg-green-700"
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" /> Valider
-                            </Button>
-                          </div>
+                            <CheckCircle className="w-4 h-4 mr-1" /> Valider
+                          </Button>
+                        </div>
                         </td>
                       </tr>
                     ))}
@@ -564,12 +564,12 @@ export default function VerifyPaymentPage() {
                         <td className="py-3 px-4">
                           <div className="text-sm text-foreground">{payment.verifiedAt}</div>
                           <div className="text-xs text-muted-foreground">par {payment.verifiedBy}</div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
               
               {/* Pagination for Verified Payments */}
               {totalVerifiedPages > 1 && (
