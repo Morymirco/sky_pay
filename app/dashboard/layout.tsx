@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle } from "lucide-react"
+import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { usePathname } from "next/navigation"
@@ -124,6 +124,7 @@ export default function DashboardLayout({
     if (pathname === "/dashboard/payments/initiate") return "INITIER LE PAIEMENT"
     if (pathname === "/dashboard/payments/verify") return "VÉRIFIER LE PAIEMENT"
     if (pathname === "/dashboard/payments/validate") return "VALIDER LE PAIEMENT"
+    if (pathname === "/dashboard/reports") return "RAPPORTS DE PAIEMENTS"
     if (pathname === "/dashboard/recharge-requests") return "DEMANDES DE RECHARGEMENT"
     if (pathname === "/dashboard/account") return "GESTION DE COMPTE"
     if (pathname === "/dashboard/settings") return "PARAMÈTRES"
@@ -255,6 +256,19 @@ export default function DashboardLayout({
                   ))}
                 </div>
             </div>
+
+            {/* Rapports */}
+            <button
+              onClick={() => window.location.href = "/dashboard/reports"}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard/reports"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <BarChart3 className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">RAPPORTS</span>}
+            </button>
 
             {/* Demandes de Rechargement */}
             <button
