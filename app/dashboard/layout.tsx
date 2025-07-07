@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle, BarChart3 } from "lucide-react"
+import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle, BarChart3, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { usePathname } from "next/navigation"
@@ -16,6 +16,7 @@ export default function DashboardLayout({
 }) {
   const [paymentsSubmenu, setPaymentsSubmenu] = useState(false)
   const [membersSubmenu, setMembersSubmenu] = useState(false)
+  const [settingsSubmenu, setSettingsSubmenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const pathname = usePathname()
@@ -68,6 +69,12 @@ export default function DashboardLayout({
       setPaymentsSubmenu(true)
     } else {
       setPaymentsSubmenu(false)
+    }
+    
+    if (pathname.startsWith("/dashboard/settings")) {
+      setSettingsSubmenu(true)
+    } else {
+      setSettingsSubmenu(false)
     }
   }, [pathname])
 
@@ -128,6 +135,7 @@ export default function DashboardLayout({
     if (pathname === "/dashboard/recharge-requests") return "DEMANDES DE RECHARGEMENT"
     if (pathname === "/dashboard/account") return "GESTION DE COMPTE"
     if (pathname === "/dashboard/settings") return "PARAMÈTRES"
+    if (pathname === "/dashboard/settings/create-role") return "CRÉER UN RÔLE"
     return "DASHBOARD"
   }
 
@@ -140,6 +148,11 @@ export default function DashboardLayout({
   const membersSubItems = [
     { id: "members-list", icon: Users, label: "LISTE DES BÉNÉFICIAIRES", href: "/dashboard/members" },
     { id: "members-import", icon: Upload, label: "IMPORTER DES BÉNÉFICIAIRES", href: "/dashboard/members/import" },
+  ]
+
+  const settingsSubItems = [
+    { id: "create-role", icon: UserPlus, label: "CRÉER UN RÔLE", href: "/dashboard/settings/create-role" },
+    { id: "settings", icon: Settings, label: "PARAMÈTRES GÉNÉRAUX", href: "/dashboard/settings" },
   ]
 
   return (
@@ -296,18 +309,44 @@ export default function DashboardLayout({
               {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
             </button>
 
-            {/* Paramètres */}
-            <button
-              onClick={() => window.location.href = "/dashboard/settings"}
-              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                pathname === "/dashboard/settings"
-                  ? "bg-blue-500 text-white shadow-lg"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-            >
-              <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-              {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
-            </button>
+            {/* Paramètres - Sous-menu */}
+            <div className="space-y-1">
+              <button
+                onClick={() => setSettingsSubmenu(!settingsSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  pathname.startsWith("/dashboard/settings")
+                    ? "bg-blue-500 text-white shadow-lg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform ${settingsSubmenu ? "rotate-180" : ""}`} />
+                )}
+              </button>
+              
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                settingsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
+                  {settingsSubItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => window.location.href = item.href}
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
+                        pathname === item.href
+                          ? "bg-blue-500/20 text-blue-500"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+            </div>
           </nav>
 
           {/* Logout Button - Positionné en bas de la sidebar */}
