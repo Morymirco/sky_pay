@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle, X, Download, CreditCard, DollarSign, Clock, CheckSquare, List, AlertCircle, Users, Eye } from "lucide-react"
+import { CheckCircle, X, Download, CreditCard, DollarSign, Clock, CheckSquare, List, AlertCircle, Users, Eye, UserMinus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 interface PaymentBatch {
   id: string
@@ -37,6 +39,9 @@ export default function VerifyPaymentPage() {
   // Modal states
   const [showBeneficiariesModal, setShowBeneficiariesModal] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PaymentBatch | null>(null)
+  const [showRemoveModal, setShowRemoveModal] = useState(false)
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null)
+  const [removeReason, setRemoveReason] = useState("")
   
   // Données des bénéficiaires (simulation - en réalité viendrait de l'API)
   const [beneficiariesData] = useState<{ [key: string]: Beneficiary[] }>({
@@ -250,6 +255,9 @@ export default function VerifyPaymentPage() {
       setVerifiedPayments([verifiedPayment, ...verifiedPayments])
       setPendingPayments(pendingPayments.filter(p => p.id !== id))
     }
+    // Fermer le modal après validation
+    setShowBeneficiariesModal(false)
+    setSelectedPayment(null)
   }
 
   const handleCancel = (id: string) => {
@@ -265,6 +273,9 @@ export default function VerifyPaymentPage() {
       setVerifiedPayments([cancelledPayment, ...verifiedPayments])
       setPendingPayments(pendingPayments.filter(p => p.id !== id))
     }
+    // Fermer le modal après annulation
+    setShowBeneficiariesModal(false)
+    setSelectedPayment(null)
   }
 
   const exportToExcel = (type: 'pending' | 'verified') => {
@@ -292,6 +303,45 @@ export default function VerifyPaymentPage() {
   const closeModal = () => {
     setShowBeneficiariesModal(false)
     setSelectedPayment(null)
+  }
+
+  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
+    setSelectedBeneficiary(beneficiary)
+    setShowRemoveModal(true)
+  }
+
+  const confirmRemoveBeneficiary = () => {
+    if (selectedBeneficiary && selectedPayment && removeReason.trim()) {
+      // Ici, on mettrait à jour les données (API call)
+      console.log(`Retrait du bénéficiaire ${selectedBeneficiary.name} pour le motif: ${removeReason}`)
+      
+      // Mise à jour locale des données
+      const updatedBeneficiaries = beneficiariesData[selectedPayment.reference]?.filter(
+        b => b.id !== selectedBeneficiary.id
+      ) || []
+      
+      // Mise à jour du nombre de bénéficiaires dans le paiement
+      const updatedPayment = {
+        ...selectedPayment,
+        beneficiaryCount: updatedBeneficiaries.length,
+        totalAmount: updatedBeneficiaries.reduce((sum, b) => sum + b.amount, 0)
+      }
+      
+      // Fermer les modals
+      setShowRemoveModal(false)
+      setSelectedBeneficiary(null)
+      setRemoveReason("")
+      
+      // Optionnel: fermer aussi le modal des bénéficiaires
+      // setShowBeneficiariesModal(false)
+      // setSelectedPayment(null)
+    }
+  }
+
+  const cancelRemoveBeneficiary = () => {
+    setShowRemoveModal(false)
+    setSelectedBeneficiary(null)
+    setRemoveReason("")
   }
 
   const getProviderColor = (provider: string) => {
@@ -440,17 +490,10 @@ export default function VerifyPaymentPage() {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => handleCancel(payment.id)} 
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRowClick(payment)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
-                            <X className="w-4 h-4 mr-1" /> Annuler
-                          </Button>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleValidate(payment.id)} 
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                            <CheckCircle className="w-4 h-4 mr-1" /> Valider
+                            <Eye className="w-4 h-4 mr-1" /> Voir
                           </Button>
                         </div>
                         </td>
@@ -529,6 +572,7 @@ export default function VerifyPaymentPage() {
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DESCRIPTION</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">VÉRIFIÉ LE</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -564,7 +608,19 @@ export default function VerifyPaymentPage() {
                         <td className="py-3 px-4">
                           <div className="text-sm text-foreground">{payment.verifiedAt}</div>
                           <div className="text-xs text-muted-foreground">par {payment.verifiedBy}</div>
-                    </td>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleRowClick(payment)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                            <Eye className="w-4 h-4 mr-1" /> Voir
+                          </Button>
+                        </div>
+                        </td>
                   </tr>
                 ))}
               </tbody>
@@ -666,6 +722,7 @@ export default function VerifyPaymentPage() {
                           <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">CONTACT</th>
                           <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">MONTANT</th>
                           <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">STATUT</th>
+                          <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">ACTIONS</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -695,6 +752,17 @@ export default function VerifyPaymentPage() {
                                 {beneficiary.status === "active" ? "Actif" : "Inactif"}
                               </Badge>
                             </td>
+                            <td className="py-2 px-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRemoveBeneficiary(beneficiary)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              >
+                                <UserMinus className="w-3 h-3 mr-1" />
+                                Retirer
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -709,13 +777,103 @@ export default function VerifyPaymentPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end pt-4 border-t border-border">
-                <Button onClick={closeModal}>
+              <div className="flex justify-between pt-4 border-t border-border">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => selectedPayment && handleCancel(selectedPayment.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Annuler le paiement
+                  </Button>
+                  <Button 
+                    onClick={() => selectedPayment && handleValidate(selectedPayment.id)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Valider le paiement
+                  </Button>
+                </div>
+                <Button variant="outline" onClick={closeModal}>
                   Fermer
                 </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmation de retrait */}
+      <Dialog open={showRemoveModal} onOpenChange={setShowRemoveModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserMinus className="w-5 h-5 text-red-500" />
+              Retirer le bénéficiaire
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedBeneficiary && (
+            <div className="space-y-4">
+              {/* Informations du bénéficiaire */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Nom:</span>
+                    <span className="ml-2 font-medium">{selectedBeneficiary.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Compte:</span>
+                    <span className="ml-2 font-mono">{selectedBeneficiary.accountNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Montant:</span>
+                    <span className="ml-2 font-bold">{selectedBeneficiary.amount}€</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Motif du retrait */}
+              <div className="space-y-2">
+                <Label htmlFor="remove-reason" className="text-sm font-medium">
+                  Motif du retrait *
+                </Label>
+                <Textarea
+                  id="remove-reason"
+                  placeholder="Veuillez indiquer le motif du retrait de ce bénéficiaire..."
+                  value={removeReason}
+                  onChange={(e) => setRemoveReason(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+
+              {/* Avertissement */}
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
+                  <div className="text-sm text-red-700 dark:text-red-300">
+                    <p className="font-medium">Attention</p>
+                    <p>Cette action est irréversible. Le bénéficiaire sera retiré du lot de paiement et le montant total sera recalculé.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelRemoveBeneficiary}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmRemoveBeneficiary}
+              disabled={!removeReason.trim()}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Confirmer le retrait
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
