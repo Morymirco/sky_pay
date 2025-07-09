@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Upload, Download, FileSpreadsheet, Users, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +31,7 @@ export default function ImportMembersPage() {
   }>({ success: 0, errors: 0, total: 0 })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
   
   const itemsPerPage = 10
   const totalPages = Math.ceil(importedData.length / itemsPerPage)
@@ -151,8 +153,9 @@ export default function ImportMembersPage() {
 
   const handleSuccessClose = () => {
     setShowSuccess(false)
+    console.log('🔄 Redirecting to members list...')
     // Rediriger vers la liste des bénéficiaires
-    window.location.href = '/dashboard/members'
+    router.push('/dashboard/members')
   }
 
   const getProviderColor = (provider: string) => {

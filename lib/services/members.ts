@@ -1,22 +1,22 @@
-import axios from "axios";
-import { API_ROUTES } from "../constants/api";
+import { apiClient } from "../utils/api";
+import { API_CONFIG } from "../constants/api";
 
 export const fetchMembers = async () => {
-  const { data } = await axios.get(API_ROUTES.members);
+  const { data } = await apiClient.get(API_CONFIG.ENDPOINTS.MEMBERS);
   return data;
 };
 
 export const createMember = async (member: any) => {
-  const { data } = await axios.post(API_ROUTES.members, member);
+  const { data } = await apiClient.post(API_CONFIG.ENDPOINTS.MEMBERS, member);
   return data;
 };
 
 export const updateMember = async (id: string, member: any) => {
-  const { data } = await axios.put(`${API_ROUTES.members}/${id}`, member);
+  const { data } = await apiClient.put(`${API_CONFIG.ENDPOINTS.MEMBERS}/${id}`, member);
   return data;
 };
 
 export const deleteMember = async (id: string) => {
-  const { data } = await axios.delete(`${API_ROUTES.members}/${id}`);
+  const { data } = await apiClient.delete(`${API_CONFIG.ENDPOINTS.MEMBERS}/${id}`);
   return data;
 }; 

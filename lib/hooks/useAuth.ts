@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { authService } from '../services/auth'
 import { useAuthStore } from '../stores/authStore'
-import { LoginCredentials, RegisterCredentials, PasswordChangeRequest } from '../types/auth'
+import { LoginCredentials, LoginResponse, OTPVerificationRequest, PasswordChangeRequest } from '../types/auth'
 import { handleApiError } from '../utils/api'
 
 export function useAuth() {
@@ -17,57 +17,95 @@ export function useAuth() {
     logout: storeLogout,
     setLoading,
     setError,
-    clearError,
-    isTokenExpired
+    clearError
   } = useAuthStore()
 
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onMutate: () => {
+      console.log('🔐 Starting login process...')
       setLoading(true)
       clearError()
     },
-    onSuccess: (data) => {
-      storeLogin({
-        user: data.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        expiresAt: Date.now() + data.expiresIn * 1000,
-        isAuthenticated: true
-      })
-      router.push('/dashboard')
+    onSuccess: (data: LoginResponse) => {
+      console.log('✅ Login response:', data)
+      
+      // L'API force l'OTP pour tous les utilisateurs
+      // Stocker les données temporaires pour l'OTP
+      console.log('📱 OTP always required, storing temp data')
+      localStorage.setItem('temp_auth_data', JSON.stringify(data.data))
+      // Ne pas connecter l'utilisateur maintenant, attendre la vérification OTP
     },
     onError: (error) => {
+      console.error('❌ Login error:', error)
       setError(handleApiError(error))
     },
     onSettled: () => {
+      console.log('🏁 Login process finished')
       setLoading(false)
     }
   })
 
-  // Register mutation
-  const registerMutation = useMutation({
-    mutationFn: authService.register,
+  // OTP verification mutation
+  const verifyOTPMutation = useMutation({
+    mutationFn: authService.verifyOTP,
     onMutate: () => {
+      console.log('🔢 Starting OTP verification...')
       setLoading(true)
       clearError()
     },
     onSuccess: (data) => {
-      storeLogin({
-        user: data.user,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        expiresAt: Date.now() + data.expiresIn * 1000,
-        isAuthenticated: true
+      console.log('✅ OTP verification successful:', data)
+      console.log('🔍 OTP response structure:', {
+        hasToken: !!data.token,
+        hasData: !!data.data,
+        tokenInData: !!data.data?.token,
+        responseKeys: Object.keys(data)
       })
-      router.push('/dashboard')
+      
+      // Récupérer les données temporaires
+      const tempData = localStorage.getItem('temp_auth_data')
+      if (tempData) {
+        const authData = JSON.parse(tempData)
+        console.log('👤 Auth data from temp storage:', authData)
+        
+        // Le token peut être dans data.token ou data.data.token
+        const finalToken = data.token || data.data?.token
+        
+        if (finalToken) {
+          storeLogin({
+            user: authData.user,
+            token: finalToken,
+            isAuthenticated: true
+          })
+          localStorage.removeItem('temp_auth_data')
+          console.log('🎉 Full authentication completed with token:', finalToken.substring(0, 20) + '...')
+          router.push('/dashboard')
+        } else {
+          console.error('❌ No token found in OTP response')
+          setError('Token non trouvé dans la réponse OTP')
+        }
+      } else {
+        console.error('❌ No temp auth data found')
+        setError('Données d\'authentification temporaires non trouvées')
+      }
     },
     onError: (error) => {
+      console.error('❌ OTP verification error:', error)
       setError(handleApiError(error))
     },
     onSettled: () => {
+      console.log('🏁 OTP verification finished')
       setLoading(false)
+    }
+  })
+
+  // Resend OTP mutation
+  const resendOTPMutation = useMutation({
+    mutationFn: (email: string) => authService.resendOTP(email),
+    onError: (error) => {
+      setError(handleApiError(error))
     }
   })
 
@@ -87,16 +125,22 @@ export function useAuth() {
     }
   })
 
-  // Current user query
+  // Current user query - Désactivée temporairement pour éviter les boucles
   const currentUserQuery = useQuery({
     queryKey: ['auth', 'user'],
     queryFn: authService.getCurrentUser,
-    enabled: isAuthenticated && !isTokenExpired(),
+    enabled: false, // Désactivée pour l'instant
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    onError: () => {
-      storeLogout()
-      router.push('/login')
+    retry: false, // Pas de retry automatique
+    onError: (error) => {
+      console.error('❌ Current user query failed:', error)
+      // Éviter la boucle infinie en vérifiant si on est déjà en train de se déconnecter
+      if (isAuthenticated) {
+        console.log('🔄 Logging out due to auth error')
+        storeLogout()
+        queryClient.clear()
+        router.push('/login')
+      }
     }
   })
 
@@ -135,12 +179,18 @@ export function useAuth() {
     // State
     user,
     isAuthenticated,
-    isLoading: storeLoading || loginMutation.isPending || registerMutation.isPending || logoutMutation.isPending,
+    isLoading: storeLoading || loginMutation.isPending || verifyOTPMutation.isPending || logoutMutation.isPending,
     error: storeError,
     
     // Actions
-    login: (credentials: LoginCredentials) => loginMutation.mutate(credentials),
-    register: (credentials: RegisterCredentials) => registerMutation.mutate(credentials),
+    login: async (credentials: LoginCredentials) => {
+      console.log('🔐 Calling login mutation...')
+      const result = await loginMutation.mutateAsync(credentials)
+      console.log('🔐 Login mutation result:', result)
+      return result
+    },
+    verifyOTP: (otpRequest: OTPVerificationRequest) => verifyOTPMutation.mutate(otpRequest),
+    resendOTP: (email: string) => resendOTPMutation.mutate(email),
     logout: () => logoutMutation.mutate(),
     changePassword: (data: PasswordChangeRequest) => changePasswordMutation.mutate(data),
     forgotPassword: (email: string) => forgotPasswordMutation.mutate({ email }),
@@ -149,7 +199,8 @@ export function useAuth() {
     
     // Mutations state
     isLoginLoading: loginMutation.isPending,
-    isRegisterLoading: registerMutation.isPending,
+    isOTPVerifying: verifyOTPMutation.isPending,
+    isResendingOTP: resendOTPMutation.isPending,
     isLogoutLoading: logoutMutation.isPending,
     isChangePasswordLoading: changePasswordMutation.isPending,
     isForgotPasswordLoading: forgotPasswordMutation.isPending,

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle, BarChart3, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -20,6 +21,7 @@ export default function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Notifications data
   const [notifications] = useState([
@@ -79,8 +81,9 @@ export default function DashboardLayout({
   }, [pathname])
 
   const handleLogout = () => {
+    console.log('🚪 Logging out user...')
     localStorage.removeItem("sky_pay_auth_token")
-    window.location.href = "/"
+    router.push("/")
   }
 
   const getNotificationIcon = (type: string) => {
@@ -115,14 +118,23 @@ export default function DashboardLayout({
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // Simple auth check - redirect to login if not authenticated
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem("sky_pay_auth_token")
-    if (!token && window.location.pathname !== "/login") {
-      window.location.href = "/login"
-      return null
+  // Auth check avec le nouveau système Zustand
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const authState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
+      const isAuthenticated = authState.state?.isAuthenticated
+      
+      console.log('🔑 Layout auth check:', { 
+        isAuthenticated, 
+        pathname: window.location.pathname 
+      })
+      
+      if (!isAuthenticated && window.location.pathname !== "/login") {
+        console.log('🔑 Not authenticated, redirecting to login')
+        router.push("/login")
+      }
     }
-  }
+  }, [router])
 
   const getSectionTitle = () => {
     if (pathname === "/dashboard") return "ACCUEIL"
@@ -182,7 +194,7 @@ export default function DashboardLayout({
           <nav className="space-y-2">
             {/* Accueil */}
             <button
-              onClick={() => window.location.href = "/dashboard"}
+              onClick={() => router.push("/dashboard")}
               className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
                 pathname === "/dashboard"
                   ? "bg-blue-500 text-white shadow-lg"
@@ -218,7 +230,7 @@ export default function DashboardLayout({
                   {membersSubItems.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => window.location.href = item.href}
+                      onClick={() => router.push(item.href)}
                       className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
                         pathname === item.href
                           ? "bg-blue-500/20 text-blue-500"
@@ -256,7 +268,7 @@ export default function DashboardLayout({
                   {paymentsSubItems.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => window.location.href = item.href}
+                      onClick={() => router.push(item.href)}
                       className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
                         pathname === item.href
                           ? "bg-blue-500/20 text-blue-500"
@@ -272,7 +284,7 @@ export default function DashboardLayout({
 
             {/* Rapports */}
             <button
-              onClick={() => window.location.href = "/dashboard/reports"}
+              onClick={() => router.push("/dashboard/reports")}
               className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
                 pathname === "/dashboard/reports"
                   ? "bg-blue-500 text-white shadow-lg"
@@ -285,7 +297,7 @@ export default function DashboardLayout({
 
             {/* Demandes de Rechargement */}
             <button
-              onClick={() => window.location.href = "/dashboard/recharge-requests"}
+              onClick={() => router.push("/dashboard/recharge-requests")}
               className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
                 pathname === "/dashboard/recharge-requests"
                   ? "bg-blue-500 text-white shadow-lg"
@@ -298,7 +310,7 @@ export default function DashboardLayout({
 
             {/* Gestion de compte */}
             <button
-              onClick={() => window.location.href = "/dashboard/account"}
+              onClick={() => router.push("/dashboard/account")}
               className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
                 pathname === "/dashboard/account"
                   ? "bg-blue-500 text-white shadow-lg"
@@ -334,7 +346,7 @@ export default function DashboardLayout({
                   {settingsSubItems.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => window.location.href = item.href}
+                      onClick={() => router.push(item.href)}
                       className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
                         pathname === item.href
                           ? "bg-blue-500/20 text-blue-500"

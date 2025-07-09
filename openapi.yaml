@@ -1,0 +1,1514 @@
+openapi: 3.0.3
+info:
+  title: Smart Pay Backend API
+  description: |
+    API complète pour la gestion des paiements et des membres de Smart Pay.
+    
+    ## Fonctionnalités principales :
+    - 🔐 Authentification avec OTP
+    - 👥 Gestion des utilisateurs et entreprises
+    - 👤 Gestion des membres avec champs personnalisés
+    - 💰 Demandes de rechargement de compte
+    - 🔍 Recherche avancée avec filtres
+    
+    ## Rôles et permissions
+    Voici la liste des rôles disponibles et leur fonctionnement :
+    - **admin** : Accès complet à toutes les fonctionnalités d'administration, gestion des utilisateurs, membres, paiements, etc.
+    - **add** : Peut uniquement ajouter de nouveaux éléments (utilisateurs, membres, etc.), sans pouvoir modifier ou supprimer.
+    - **delete_and_add_edit** : Peut ajouter, modifier et supprimer des éléments (sauf actions critiques liées aux paiements).
+    - **init_paiement** : Peut initier une demande de paiement/rechargement, mais ne peut pas la confirmer ou la vérifier.
+    - **confirm_paiement** : Peut confirmer une demande de paiement/rechargement initiée par un autre utilisateur.
+    - **verify_paiement** : Peut vérifier et valider qu'un paiement a bien été effectué (contrôle final).
+    - **user** : Accès limité à ses propres informations et actions autorisées par l'entreprise.
+    - **super_admin** : Accès total à toutes les fonctionnalités, y compris la gestion des rôles et des permissions.
+    
+    Chaque rôle permet de contrôler précisément les droits d'accès et d'action dans le système.
+    
+    ## Authentification
+    L'API utilise JWT pour l'authentification. Incluez le token dans le header :
+    ```
+    Authorization: Bearer <votre_token>
+    ```
+    
+    ## Codes de statut
+    - `200` : Succès
+    - `201` : Créé avec succès
+    - `400` : Données invalides
+    - `401` : Non autorisé
+    - `404` : Ressource non trouvée
+    - `500` : Erreur serveur
+  version: 1.0.0
+  contact:
+    name: Smart Pay Support
+    email: support@smartpay.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement
+  - url: https://api.smartpay.com/api
+    description: Serveur de production
+
+tags:
+  - name: Authentication
+    description: Endpoints d'authentification et gestion des comptes
+  - name: Users
+    description: Gestion des utilisateurs
+  - name: Members
+    description: Gestion des membres avec champs personnalisés
+  - name: Recharge Requests
+    description: Gestion des demandes de rechargement de compte
+  - name: Documentation
+    description: Documentation de l'API
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token d'authentification
+
+  schemas:
+    # Schémas d'authentification
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 6
+          description: Mot de passe de l'utilisateur
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Connexion réussie"
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Token JWT temporaire (30 minutes)
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                username:
+                  type: string
+                  example: "john_doe"
+                role:
+                  type: string
+                  enum: [user, admin, super_admin, add, delete_and_add_edit, init_paiement, confirm_paiement, verify_paiement]
+                  example: "admin"
+                company:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: "Smart Pay Corp"
+                is_first_login:
+                  type: boolean
+                  example: false
+            requiresOTP:
+              type: boolean
+              description: Indique si l'OTP est requis
+              example: true
+
+    OTPVerificationRequest:
+      type: object
+      required:
+        - otp
+      properties:
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: Code OTP à 6 chiffres
+          example: "123456"
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - current_password
+        - new_password
+      properties:
+        current_password:
+          type: string
+          minLength: 6
+          description: Mot de passe actuel
+        new_password:
+          type: string
+          minLength: 6
+          description: Nouveau mot de passe
+
+    # Schémas utilisateurs
+    CreateUserRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - role
+      properties:
+        first_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "John"
+        last_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: "john_doe"
+        role:
+          type: string
+          enum: [user, admin, super_admin, add, delete_and_add_edit, init_paiement, confirm_paiement, verify_paiement]
+          example: "admin"
+        phone:
+          type: string
+          example: "+2250123456789"
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          example: "John"
+        last_name:
+          type: string
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        username:
+          type: string
+          example: "john_doe"
+        role:
+          type: string
+          example: "admin"
+        phone:
+          type: string
+          example: "+2250123456789"
+        is_active:
+          type: boolean
+          example: true
+        companyId:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Schémas membres
+    CreateMemberRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - paiement_methode
+        - paiement_identicator
+        - town
+      properties:
+        first_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Alice"
+        last_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Johnson"
+        email:
+          type: string
+          format: email
+          example: "alice.johnson@example.com"
+        phone:
+          type: string
+          example: "+2250123456789"
+        paiement_methode:
+          type: string
+          enum: [kulu, orange_money, soutra_money, mobile_money]
+          example: "orange_money"
+        paiement_identicator:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "0123456789"
+        montant_paiement:
+          type: integer
+          minimum: 0
+          example: 50000
+        town:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Abidjan"
+        custom_attributes:
+          type: object
+          description: Champs personnalisés (exactement 2 champs)
+          example:
+            numero_retraite: "123456789"
+            code_agence: "AG001"
+
+    UpdateMemberRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        last_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        paiement_methode:
+          type: string
+          enum: [kulu, orange_money, soutra_money, mobile_money]
+        paiement_identicator:
+          type: string
+          minLength: 1
+          maxLength: 100
+        montant_paiement:
+          type: integer
+          minimum: 0
+        town:
+          type: string
+          minLength: 2
+          maxLength: 100
+        custom_attributes:
+          type: object
+          description: Champs personnalisés (exactement 2 champs)
+        is_active:
+          type: boolean
+
+    MemberResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          example: "Alice"
+        last_name:
+          type: string
+          example: "Johnson"
+        email:
+          type: string
+          format: email
+          example: "alice.johnson@example.com"
+        phone:
+          type: string
+          example: "+2250123456789"
+        paiement_methode:
+          type: string
+          example: "orange_money"
+        paiement_identicator:
+          type: string
+          example: "0123456789"
+        montant_paiement:
+          type: integer
+          example: 50000
+        town:
+          type: string
+          example: "Abidjan"
+        custom_attributes:
+          type: object
+          example:
+            numero_retraite: "123456789"
+            code_agence: "AG001"
+        is_active:
+          type: boolean
+          example: true
+        companyId:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Schémas demandes de rechargement
+    CreateRechargeRequestRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: integer
+          minimum: 1000
+          maximum: 1000000000
+          description: Montant en FCFA
+          example: 100000
+        reason:
+          type: string
+          maxLength: 500
+          description: Raison de la demande
+          example: "Rechargement pour paiements de membres"
+        paymentMethod:
+          type: string
+          enum: [bank_transfer, mobile_money, cash, check, other]
+          example: "bank_transfer"
+        paymentReference:
+          type: string
+          maxLength: 100
+          description: Référence du paiement
+          example: "REF123456"
+        attachmentUrl:
+          type: string
+          format: uri
+          description: URL de la pièce jointe
+          example: "https://example.com/attachment.pdf"
+        notes:
+          type: string
+          maxLength: 1000
+          description: Notes supplémentaires
+          example: "Demande urgente pour fin de mois"
+        isUrgent:
+          type: boolean
+          default: false
+          example: true
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+          default: normal
+          example: "high"
+
+    RechargeRequestResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        amount:
+          type: integer
+          example: 100000
+        reason:
+          type: string
+          example: "Rechargement pour paiements de membres"
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+          example: "pending"
+        paymentMethod:
+          type: string
+          example: "bank_transfer"
+        paymentReference:
+          type: string
+          example: "REF123456"
+        attachmentUrl:
+          type: string
+          example: "https://example.com/attachment.pdf"
+        notes:
+          type: string
+          example: "Demande urgente pour fin de mois"
+        isUrgent:
+          type: boolean
+          example: true
+        priority:
+          type: string
+          example: "high"
+        processedBy:
+          type: integer
+          nullable: true
+          example: 2
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        companyId:
+          type: integer
+          example: 1
+        requestedById:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Schémas de pagination
+    PaginationInfo:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 100
+        itemsPerPage:
+          type: integer
+          example: 20
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+        nextPage:
+          type: integer
+          nullable: true
+          example: 2
+        prevPage:
+          type: integer
+          nullable: true
+          example: null
+
+    # Schémas de réponse générique
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Opération réussie"
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Erreur de validation"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Email invalide"
+
+paths:
+  # ========================================
+  # DOCUMENTATION
+  # ========================================
+  
+  /docs:
+    get:
+      tags:
+        - Documentation
+      summary: Documentation de l'API
+      description: |
+        Interface Redoc pour consulter la documentation complète de l'API.
+        Cette route sert une interface web interactive avec tous les endpoints.
+      responses:
+        '200':
+          description: Interface de documentation HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          description: Documentation non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /docs/spec:
+    get:
+      tags:
+        - Documentation
+      summary: Spécification OpenAPI
+      description: Retourne le fichier de spécification OpenAPI au format YAML
+      responses:
+        '200':
+          description: Spécification OpenAPI
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '404':
+          description: Spécification non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /docs/info:
+    get:
+      tags:
+        - Documentation
+      summary: Informations de l'API
+      description: Retourne les informations générales de l'API
+      responses:
+        '200':
+          description: Informations de l'API
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Documentation API Smart Pay Backend"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Smart Pay Backend API"
+                      version:
+                        type: string
+                        example: "1.0.0"
+                      description:
+                        type: string
+                        example: "API complète pour la gestion des paiements et des membres"
+                      endpoints:
+                        type: object
+                        properties:
+                          auth:
+                            type: string
+                            example: "/api/auth"
+                          users:
+                            type: string
+                            example: "/api/users"
+                          members:
+                            type: string
+                            example: "/api/members"
+                          rechargeRequests:
+                            type: string
+                            example: "/api/recharge-requests"
+                          documentation:
+                            type: string
+                            example: "/api/docs"
+                      features:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          - "🔐 Authentification avec OTP"
+                          - "👥 Gestion des utilisateurs et entreprises"
+                          - "👤 Gestion des membres avec champs personnalisés"
+                          - "💰 Demandes de rechargement de compte"
+                          - "🔍 Recherche avancée avec filtres"
+
+  # ========================================
+  # AUTHENTIFICATION
+  # ========================================
+  
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Connexion utilisateur
+      description: |
+        Authentifie un utilisateur avec email/mot de passe.
+        Génère un token temporaire et envoie un OTP par email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Email ou mot de passe incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Vérification OTP
+      description: Vérifie le code OTP et génère un token final
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerificationRequest'
+      responses:
+        '200':
+          description: OTP vérifié avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "OTP vérifié avec succès"
+                  token:
+                    type: string
+                    description: Token JWT final
+        '401':
+          description: OTP invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Changer le mot de passe
+      description: Change le mot de passe de l'utilisateur connecté
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Mot de passe changé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Mot de passe actuel incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ========================================
+  # UTILISATEURS
+  # ========================================
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Obtenir les informations de l'utilisateur connecté
+      description: Récupère les informations de l'utilisateur actuellement connecté
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Informations utilisateur récupérées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Lister les utilisateurs
+      description: Récupère la liste des utilisateurs de l'entreprise
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          description: Terme de recherche
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des utilisateurs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Utilisateurs récupérés avec succès"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+    post:
+      tags:
+        - Users
+      summary: Créer un utilisateur
+      description: Crée un nouvel utilisateur avec mot de passe temporaire
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Utilisateur créé avec succès"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/UserResponse'
+                      emailSent:
+                        type: boolean
+                        example: true
+                      emailMessage:
+                        type: string
+                        example: "Email envoyé avec succès"
+                      temporaryPassword:
+                        type: string
+                        description: Mot de passe temporaire généré
+
+  /users/{id}:
+    put:
+      tags:
+        - Users
+      summary: Mettre à jour un utilisateur
+      description: Met à jour les informations d'un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'utilisateur
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: Utilisateur mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/{id}/disable:
+    put:
+      tags:
+        - Users
+      summary: Désactiver un utilisateur
+      description: Désactive un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'utilisateur
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Utilisateur désactivé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/{id}/enable:
+    put:
+      tags:
+        - Users
+      summary: Activer un utilisateur
+      description: Active un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de l'utilisateur
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Utilisateur activé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ========================================
+  # MEMBRES
+  # ========================================
+
+  /members:
+    get:
+      tags:
+        - Members
+      summary: Lister les membres
+      description: |
+        Récupère la liste des membres de l'entreprise avec pagination et filtres.
+        La recherche inclut les champs personnalisés.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          description: Terme de recherche (nom, prénom, email, téléphone, champs personnalisés)
+          schema:
+            type: string
+        - name: is_active
+          in: query
+          description: Filtrer par statut actif
+          schema:
+            type: boolean
+        - name: paiement_methode
+          in: query
+          description: Filtrer par méthode de paiement
+          schema:
+            type: string
+            enum: [kulu, orange_money, soutra_money, mobile_money]
+      responses:
+        '200':
+          description: Liste des membres
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Membres récupérés avec succès"
+                  data:
+                    type: object
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MemberResponse'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationInfo'
+                      filters:
+                        type: object
+                        properties:
+                          search:
+                            type: string
+                          is_active:
+                            type: boolean
+                          paiement_methode:
+                            type: string
+                      company:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+
+    post:
+      tags:
+        - Members
+      summary: Créer un membre
+      description: Crée un nouveau membre avec champs personnalisés
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemberRequest'
+      responses:
+        '201':
+          description: Membre créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Membre créé avec succès"
+                  data:
+                    $ref: '#/components/schemas/MemberResponse'
+
+  /members/{id}:
+    put:
+      tags:
+        - Members
+      summary: Mettre à jour un membre
+      description: Met à jour les informations d'un membre
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID du membre
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRequest'
+      responses:
+        '200':
+          description: Membre mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /members/search/advanced:
+    get:
+      tags:
+        - Members
+      summary: Recherche avancée de membres
+      description: |
+        Recherche avancée avec filtres spécifiques sur les champs personnalisés.
+        Permet de rechercher par nom de champ personnalisé et valeur exacte.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          description: Terme de recherche général
+          schema:
+            type: string
+        - name: customFieldName
+          in: query
+          description: Nom du champ personnalisé spécifique
+          schema:
+            type: string
+            example: "numero_retraite"
+        - name: customFieldValue
+          in: query
+          description: Valeur exacte du champ personnalisé
+          schema:
+            type: string
+            example: "123456789"
+        - name: is_active
+          in: query
+          description: Filtrer par statut actif
+          schema:
+            type: boolean
+        - name: paiement_methode
+          in: query
+          description: Filtrer par méthode de paiement
+          schema:
+            type: string
+            enum: [kulu, orange_money, soutra_money, mobile_money]
+      responses:
+        '200':
+          description: Recherche avancée terminée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Recherche avancée terminée"
+                  data:
+                    type: object
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MemberResponse'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationInfo'
+                      filters:
+                        type: object
+                        properties:
+                          search:
+                            type: string
+                          customFieldName:
+                            type: string
+                          customFieldValue:
+                            type: string
+                          is_active:
+                            type: boolean
+                          paiement_methode:
+                            type: string
+                      company:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+
+  # ========================================
+  # DEMANDES DE RECHARGEMENT
+  # ========================================
+
+  /recharge-requests:
+    get:
+      tags:
+        - Recharge Requests
+      summary: Lister les demandes de rechargement
+      description: Récupère la liste des demandes de rechargement avec pagination et filtres
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          description: Filtrer par statut
+          schema:
+            type: string
+            enum: [pending, approved, rejected, cancelled]
+        - name: priority
+          in: query
+          description: Filtrer par priorité
+          schema:
+            type: string
+            enum: [low, normal, high, urgent]
+        - name: isUrgent
+          in: query
+          description: Filtrer les demandes urgentes
+          schema:
+            type: boolean
+        - name: startDate
+          in: query
+          description: Date de début (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Date de fin (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des demandes de rechargement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Demandes de rechargement récupérées avec succès"
+                  data:
+                    type: object
+                    properties:
+                      requests:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RechargeRequestResponse'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationInfo'
+                      filters:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          priority:
+                            type: string
+                          isUrgent:
+                            type: boolean
+                          startDate:
+                            type: string
+                          endDate:
+                            type: string
+
+    post:
+      tags:
+        - Recharge Requests
+      summary: Créer une demande de rechargement
+      description: Crée une nouvelle demande de rechargement de compte
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRechargeRequestRequest'
+      responses:
+        '201':
+          description: Demande de rechargement créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Demande de rechargement créée avec succès"
+                  data:
+                    $ref: '#/components/schemas/RechargeRequestResponse'
+
+  /recharge-requests/{id}:
+    get:
+      tags:
+        - Recharge Requests
+      summary: Obtenir une demande de rechargement
+      description: Récupère les détails d'une demande de rechargement spécifique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la demande de rechargement
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détails de la demande de rechargement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Demande de rechargement récupérée avec succès"
+                  data:
+                    $ref: '#/components/schemas/RechargeRequestResponse'
+
+  /recharge-requests/{id}/approve:
+    put:
+      tags:
+        - Recharge Requests
+      summary: Approuver une demande de rechargement
+      description: Approuve une demande de rechargement (admin seulement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la demande de rechargement
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Notes d'approbation
+      responses:
+        '200':
+          description: Demande approuvée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /recharge-requests/{id}/reject:
+    put:
+      tags:
+        - Recharge Requests
+      summary: Rejeter une demande de rechargement
+      description: Rejette une demande de rechargement (admin seulement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la demande de rechargement
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rejectionReason:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                  description: Raison du rejet
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Notes supplémentaires
+      responses:
+        '200':
+          description: Demande rejetée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /recharge-requests/{id}/cancel:
+    put:
+      tags:
+        - Recharge Requests
+      summary: Annuler une demande de rechargement
+      description: Annule une demande de rechargement (demandeur ou admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la demande de rechargement
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Raison de l'annulation
+      responses:
+        '200':
+          description: Demande annulée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /recharge-requests/stats/overview:
+    get:
+      tags:
+        - Recharge Requests
+      summary: Statistiques des demandes de rechargement
+      description: Récupère les statistiques globales des demandes de rechargement
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Statistiques récupérées avec succès"
+                  data:
+                    type: object
+                    properties:
+                      overview:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 100
+                          pending:
+                            type: integer
+                            example: 25
+                          approved:
+                            type: integer
+                            example: 60
+                          rejected:
+                            type: integer
+                            example: 10
+                          cancelled:
+                            type: integer
+                            example: 5
+                      amounts:
+                        type: object
+                        properties:
+                          totalApproved:
+                            type: integer
+                            example: 50000000
+                          totalPending:
+                            type: integer
+                            example: 10000000
+                      urgent:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            example: 5 

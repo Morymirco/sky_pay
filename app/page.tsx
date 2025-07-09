@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowRight, Shield, CreditCard, Users, TrendingUp, CheckCircle, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,12 +10,14 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleGetStarted = () => {
     setIsLoading(true)
+    console.log('🚀 Navigating to login page...')
     // Simulate loading
     setTimeout(() => {
-      window.location.href = "/login"
+      router.push("/login")
     }, 1000)
   }
 

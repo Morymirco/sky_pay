@@ -1,41 +1,33 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Building, Wallet, Users, FileText, CheckCircle, CheckSquare } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useAuthStore } from "@/lib/stores/authStore"
 
 export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { isAuthenticated, user } = useAuthStore()
+  const router = useRouter()
 
-  // Vérification d'authentification améliorée
+  // Vérification d'authentification avec le nouveau système
   useEffect(() => {
-    const checkAuth = () => {
-    const token = localStorage.getItem("sky_pay_auth_token")
-      if (!token) {
-      window.location.href = "/login"
-        return
-      }
-      setIsAuthenticated(true)
-      setIsLoading(false)
+    console.log('🔍 Dashboard auth check:', { isAuthenticated, user: user?.email })
+    
+    if (!isAuthenticated) {
+      console.log('❌ Not authenticated, redirecting to login')
+      router.push("/login")
     }
+  }, [isAuthenticated, router])
 
-    checkAuth()
-  }, [])
-
-  // Afficher un loader pendant la vérification
-  if (isLoading) {
+  // Si pas authentifié, ne rien afficher (redirection en cours)
+  if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     )
-  }
-
-  // Si pas authentifié, ne rien afficher (redirection en cours)
-  if (!isAuthenticated) {
-      return null
   }
 
   return (

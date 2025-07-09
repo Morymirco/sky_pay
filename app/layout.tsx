@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
+import { QueryProvider } from '@/lib/providers/query-provider'
+import { AuthCheckProvider } from '@/lib/providers/auth-check-provider'
 
 export const metadata: Metadata = {
   title: 'Sky Pay - Transfert d\'argent',
@@ -16,14 +18,18 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthCheckProvider>
+              {children}
+            </AuthCheckProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   )

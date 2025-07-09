@@ -1,43 +1,62 @@
 export interface User {
-  id: string
+  id: number
+  first_name: string
+  last_name: string
   email: string
-  name: string
-  role: 'admin' | 'user' | 'manager'
-  permissions: string[]
-  lastLogin?: string
-  isActive: boolean
+  username?: string
+  role: 'user' | 'admin' | 'super_admin' | 'add' | 'delete_and_add_edit' | 'init_paiement' | 'confirm_paiement' | 'verify_paiement'
+  phone?: string
+  is_active: boolean
+  companyId: number
+  company?: {
+    id: number
+    name: string
+  }
+  is_first_login?: boolean
   createdAt: string
   updatedAt: string
 }
 
 export interface AuthSession {
   user: User
-  accessToken: string
-  refreshToken: string
-  expiresAt: number
+  token: string
   isAuthenticated: boolean
 }
 
 export interface LoginCredentials {
   email: string
   password: string
-  rememberMe?: boolean
 }
 
-export interface RegisterCredentials {
-  name: string
-  email: string
-  password: string
-  confirmPassword: string
+export interface LoginResponse {
+  success: boolean
+  message: string
+  data: {
+    token: string
+    user: User
+    requiresOTP: boolean
+  }
+}
+
+export interface OTPVerificationRequest {
+  otp: string
+}
+
+export interface OTPVerificationResponse {
+  success: boolean
+  message: string
+  token: string
+}
+
+export interface ChangePasswordRequest {
+  current_password: string
+  new_password: string
 }
 
 export interface AuthResponse {
   success: boolean
-  user: User
-  accessToken: string
-  refreshToken: string
-  expiresIn: number
-  message?: string
+  message: string
+  data?: any
 }
 
 export interface RefreshTokenResponse {
@@ -47,9 +66,8 @@ export interface RefreshTokenResponse {
 }
 
 export interface PasswordChangeRequest {
-  currentPassword: string
-  newPassword: string
-  confirmNewPassword: string
+  current_password: string
+  new_password: string
 }
 
 export interface ForgotPasswordRequest {
@@ -58,6 +76,6 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string
-  newPassword: string
+  new_password: string
   confirmNewPassword: string
 } 

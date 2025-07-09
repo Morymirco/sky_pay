@@ -5,9 +5,7 @@ import { AuthSession, User } from '../types/auth'
 interface AuthState {
   // State
   user: User | null
-  accessToken: string | null
-  refreshToken: string | null
-  expiresAt: number | null
+  token: string | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -16,17 +14,14 @@ interface AuthState {
   login: (session: AuthSession) => void
   logout: () => void
   setUser: (user: User) => void
-  updateToken: (accessToken: string, expiresIn: number) => void
+  setToken: (token: string) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   clearSession: () => void
   clearError: () => void
   
   // Computed
-  isTokenExpired: () => boolean
-  hasPermission: (permission: string) => boolean
   hasRole: (role: string) => boolean
-  canAccess: (requiredPermissions: string[]) => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,38 +30,39 @@ export const useAuthStore = create<AuthState>()(
       (set, get) => ({
         // Initial state
         user: null,
-        accessToken: null,
-        refreshToken: null,
-        expiresAt: null,
+        token: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
 
         // Actions
-        login: (session) => set({
-          user: session.user,
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken,
-          expiresAt: session.expiresAt,
-          isAuthenticated: true,
-          error: null
-        }),
+        login: (session) => {
+          console.log('🔐 Storing auth session:', {
+            user: session.user.email,
+            hasToken: !!session.token,
+            tokenPreview: session.token ? `${session.token.substring(0, 10)}...` : 'none'
+          })
+          set({
+            user: session.user,
+            token: session.token,
+            isAuthenticated: true,
+            error: null
+          })
+        },
 
-        logout: () => set({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          expiresAt: null,
-          isAuthenticated: false,
-          error: null
-        }),
+        logout: () => {
+          console.log('🚪 Logging out user')
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            error: null
+          })
+        },
 
         setUser: (user) => set({ user }),
 
-        updateToken: (accessToken, expiresIn) => set({
-          accessToken,
-          expiresAt: Date.now() + expiresIn * 1000
-        }),
+        setToken: (token) => set({ token }),
 
         setLoading: (isLoading) => set({ isLoading }),
 
@@ -74,9 +70,7 @@ export const useAuthStore = create<AuthState>()(
 
         clearSession: () => set({
           user: null,
-          accessToken: null,
-          refreshToken: null,
-          expiresAt: null,
+          token: null,
           isAuthenticated: false,
           error: null
         }),
@@ -84,43 +78,21 @@ export const useAuthStore = create<AuthState>()(
         clearError: () => set({ error: null }),
 
         // Computed
-        isTokenExpired: () => {
-          const { expiresAt } = get()
-          return expiresAt ? Date.now() > expiresAt : true
-        },
-
-        hasPermission: (permission) => {
-          const { user } = get()
-          return user?.permissions?.includes(permission) || false
-        },
-
         hasRole: (role) => {
           const { user } = get()
           return user?.role === role
-        },
-
-        canAccess: (requiredPermissions) => {
-          const { user } = get()
-          if (!user?.permissions) return false
-          return requiredPermissions.every(permission => 
-            user.permissions.includes(permission)
-          )
         }
       }),
       {
         name: 'auth-storage',
         partialize: (state) => ({
           user: state.user,
-          accessToken: state.accessToken,
-          refreshToken: state.refreshToken,
-          expiresAt: state.expiresAt,
+          token: state.token,
           isAuthenticated: state.isAuthenticated
         }),
         onRehydrateStorage: () => (state) => {
-          // Vérifier si le token est expiré au rechargement
-          if (state && state.isTokenExpired()) {
-            state.clearSession()
-          }
+          // Nettoyer les données temporaires au rechargement
+          localStorage.removeItem('temp_auth_data')
         }
       }
     )
