@@ -21,6 +21,7 @@ export interface AuthSession {
   user: User
   token: string
   isAuthenticated: boolean
+  isFirstLogin?: boolean
 }
 
 export interface LoginCredentials {
@@ -70,12 +71,22 @@ export interface PasswordChangeRequest {
   new_password: string
 }
 
-export interface ForgotPasswordRequest {
+
+
+export interface RequestPasswordResetOTPRequest {
   email: string
 }
 
-export interface ResetPasswordRequest {
-  token: string
+export interface ResetPasswordOTPRequest {
+  email: string
+  otp: string
   new_password: string
-  confirmNewPassword: string
+}
+
+export interface RequestPasswordResetOTPResponse {
+  message: string
+}
+
+export interface ResetPasswordOTPResponse {
+  message: string
 } 

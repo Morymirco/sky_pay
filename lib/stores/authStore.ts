@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
+  isFirstLogin: boolean
   
   // Actions
   login: (session: AuthSession) => void
@@ -17,6 +18,7 @@ interface AuthState {
   setToken: (token: string) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
+  setFirstLogin: (isFirstLogin: boolean) => void
   clearSession: () => void
   clearError: () => void
   
@@ -34,18 +36,21 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: false,
         isLoading: false,
         error: null,
+        isFirstLogin: false,
 
         // Actions
         login: (session) => {
           console.log('🔐 Storing auth session:', {
             user: session.user.email,
             hasToken: !!session.token,
-            tokenPreview: session.token ? `${session.token.substring(0, 10)}...` : 'none'
+            tokenPreview: session.token ? `${session.token.substring(0, 10)}...` : 'none',
+            isFirstLogin: session.isFirstLogin
           })
           set({
             user: session.user,
             token: session.token,
             isAuthenticated: true,
+            isFirstLogin: session.isFirstLogin || false,
             error: null
           })
         },
@@ -56,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isAuthenticated: false,
+            isFirstLogin: false,
             error: null
           })
         },
@@ -68,10 +74,13 @@ export const useAuthStore = create<AuthState>()(
 
         setError: (error) => set({ error }),
 
+        setFirstLogin: (isFirstLogin) => set({ isFirstLogin }),
+
         clearSession: () => set({
           user: null,
           token: null,
           isAuthenticated: false,
+          isFirstLogin: false,
           error: null
         }),
 
@@ -88,7 +97,8 @@ export const useAuthStore = create<AuthState>()(
         partialize: (state) => ({
           user: state.user,
           token: state.token,
-          isAuthenticated: state.isAuthenticated
+          isAuthenticated: state.isAuthenticated,
+          isFirstLogin: state.isFirstLogin
         }),
         onRehydrateStorage: () => (state) => {
           // Nettoyer les données temporaires au rechargement

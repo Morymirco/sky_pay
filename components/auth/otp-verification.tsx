@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, RefreshCw, CheckCircle, XCircle, Mail } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { OTPVerificationRequest } from "@/lib/types/auth"
+import { otpVerificationSchema } from "@/lib/validations/auth"
+import { ArrowLeft, Mail, RefreshCw, XCircle } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 interface OTPVerificationProps {
   email: string
@@ -69,8 +70,11 @@ export function OTPVerification({ email, onBack, onSuccess }: OTPVerificationPro
   const handleSubmit = async (otpValue?: string) => {
     const otpString = otpValue || otp.join("")
     
-    if (otpString.length !== 6) {
-      setError("Veuillez entrer le code OTP complet")
+    // Validation avec Zod
+    try {
+      otpVerificationSchema.parse({ otp: otpString })
+    } catch (validationError: any) {
+      setError(validationError.errors[0]?.message || "Code OTP invalide")
       return
     }
 
@@ -80,9 +84,23 @@ export function OTPVerification({ email, onBack, onSuccess }: OTPVerificationPro
     try {
       console.log('🔢 Submitting OTP:', otpString)
       const request: OTPVerificationRequest = { otp: otpString }
+      
+      // Vérifier que les données temporaires existent
+      const tempData = localStorage.getItem('temp_auth_data')
+      if (!tempData) {
+        throw new Error('Données d\'authentification temporaires non trouvées')
+      }
+      
+      const authData = JSON.parse(tempData)
+      console.log('🔢 Temp auth data:', {
+        hasToken: !!authData.token,
+        tokenPreview: authData.token ? `${authData.token.substring(0, 20)}...` : 'none',
+        hasUser: !!authData.user
+      })
+      
       await verifyOTP(request)
       console.log('✅ OTP verification successful')
-      onSuccess()
+      // Ne pas appeler onSuccess() ici - la redirection sera gérée par le hook useAuth
     } catch (err: any) {
       console.error('❌ OTP verification failed:', err)
       setError(err.message || "Code OTP invalide")
@@ -147,7 +165,9 @@ export function OTPVerification({ email, onBack, onSuccess }: OTPVerificationPro
             {otp.map((digit, index) => (
               <Input
                 key={index}
-                ref={(el) => (inputRefs.current[index] = el)}
+                ref={(el) => {
+                  inputRefs.current[index] = el
+                }}
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"

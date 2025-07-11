@@ -6,6 +6,13 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional()
 })
 
+export const otpVerificationSchema = z.object({
+  otp: z.string()
+    .min(6, 'Le code OTP doit contenir exactement 6 chiffres')
+    .max(6, 'Le code OTP doit contenir exactement 6 chiffres')
+    .regex(/^\d{6}$/, 'Le code OTP doit contenir uniquement 6 chiffres')
+})
+
 export const registerSchema = z.object({
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').max(50, 'Le nom ne peut pas dépasser 50 caractères'),
   email: z.string().email('Email invalide'),
@@ -45,6 +52,7 @@ export const resetPasswordSchema = z.object({
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>
+export type OTPVerificationFormData = z.infer<typeof otpVerificationSchema>
 export type RegisterFormData = z.infer<typeof registerSchema>
 export type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>

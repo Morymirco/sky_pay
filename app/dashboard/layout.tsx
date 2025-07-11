@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronRight, Users, CreditCard, History, Settings, LogOut, Bell, RefreshCw, ChevronDown, Play, CheckCircle, Shield, Home, Building, Wallet, UserCheck, FileText, CheckSquare, Upload, Key, Globe, User, X, Clock, AlertCircle, BarChart3, UserPlus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChangePasswordModal } from "@/components/auth/change-password-modal"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { usePathname } from "next/navigation"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { useAuthStore } from "@/lib/stores/authStore"
+import { AlertCircle, BarChart3, Bell, CheckCircle, ChevronDown, ChevronRight, Clock, CreditCard, Home, LogOut, Play, RefreshCw, Settings, Shield, Upload, User, UserPlus, Users, X } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function DashboardLayout({
   children,
@@ -20,8 +20,19 @@ export default function DashboardLayout({
   const [settingsSubmenu, setSettingsSubmenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  const { isFirstLogin } = useAuthStore()
+
+  // Afficher le modal de changement de mot de passe si c'est le premier login
+  useEffect(() => {
+    if (isFirstLogin) {
+      console.log('🔐 First login detected, showing password change modal')
+      setShowChangePasswordModal(true)
+    }
+  }, [isFirstLogin])
 
   // Notifications data
   const [notifications] = useState([
@@ -519,6 +530,15 @@ export default function DashboardLayout({
           )}
         </DrawerContent>
       </Drawer>
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          isOpen={showChangePasswordModal}
+          onClose={() => setShowChangePasswordModal(false)}
+          isFirstLogin={isFirstLogin}
+        />
+      )}
     </div>
   )
 } 

@@ -61,7 +61,8 @@ export function useAuth() {
         hasToken: !!data.token,
         hasData: !!data.data,
         tokenInData: !!data.data?.token,
-        responseKeys: Object.keys(data)
+        responseKeys: Object.keys(data),
+        isFirstLogin: data.first_login
       })
       
       // Récupérer les données temporaires
@@ -72,28 +73,35 @@ export function useAuth() {
         
         // Le token peut être dans data.token ou data.data.token
         const finalToken = data.token || data.data?.token
+        const isFirstLogin = data.first_login || false
         
         if (finalToken) {
           storeLogin({
             user: authData.user,
             token: finalToken,
-            isAuthenticated: true
+            isAuthenticated: true,
+            isFirstLogin: isFirstLogin
           })
           localStorage.removeItem('temp_auth_data')
           console.log('🎉 Full authentication completed with token:', finalToken.substring(0, 20) + '...')
+          console.log('🎉 First login:', isFirstLogin)
+          // Redirection seulement si l'authentification est complète
           router.push('/dashboard')
         } else {
           console.error('❌ No token found in OTP response')
           setError('Token non trouvé dans la réponse OTP')
+          // Pas de redirection si pas de token
         }
       } else {
         console.error('❌ No temp auth data found')
         setError('Données d\'authentification temporaires non trouvées')
+        // Pas de redirection si pas de données temporaires
       }
     },
     onError: (error) => {
       console.error('❌ OTP verification error:', error)
       setError(handleApiError(error))
+      // Pas de redirection en cas d'erreur - l'utilisateur reste sur la page OTP
     },
     onSettled: () => {
       console.log('🏁 OTP verification finished')
