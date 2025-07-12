@@ -93,8 +93,19 @@ export function ResetPasswordPanel({ onBack, onSuccess }: ResetPasswordPanelProp
     
     try {
       // Vérifier l'OTP de réinitialisation avec le service d'authentification
-      await authService.verifyResetOTP(email, data.otp)
+      const response = await authService.verifyResetOTP(email, data.otp)
       setOtp(data.otp)
+      
+      // Stocker le token retourné par la vérification de l'OTP
+      if (response.token) {
+        const currentResetData = JSON.parse(localStorage.getItem('temp_reset_data') || '{}')
+        localStorage.setItem('temp_reset_data', JSON.stringify({
+          ...currentResetData,
+          token: response.token
+        }))
+        console.log('💾 Updated temp reset data with verification token:', response.token.substring(0, 20) + '...')
+      }
+      
       setCurrentStep('password')
       toast({
         title: "Code OTP vérifié",
@@ -120,9 +131,14 @@ export function ResetPasswordPanel({ onBack, onSuccess }: ResetPasswordPanelProp
       
       toast({
         title: "Mot de passe réinitialisé",
-        description: "Votre mot de passe a été modifié avec succès",
+        description: "Votre mot de passe a été modifié avec succès. Vous allez être redirigé vers la page de connexion.",
       })
-      onSuccess()
+      
+      // Rediriger vers la page de login après un délai
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 2000)
+      
     } catch (error: any) {
       setError(error.response?.data?.message || 'Erreur lors de la réinitialisation du mot de passe')
     } finally {
@@ -221,11 +237,19 @@ export function ResetPasswordPanel({ onBack, onSuccess }: ResetPasswordPanelProp
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Button 
+            type="submit" 
+            className="w-full py-3 rounded-lg text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition" 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Envoi en cours...
+              </div>
+            ) : (
+              "Envoyer le code OTP"
             )}
-            Envoyer le code OTP
           </Button>
         </form>
       </div>
@@ -287,11 +311,19 @@ export function ResetPasswordPanel({ onBack, onSuccess }: ResetPasswordPanelProp
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Button 
+            type="submit" 
+            className="w-full py-3 rounded-lg text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition" 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Vérification...
+              </div>
+            ) : (
+              "Vérifier le code OTP"
             )}
-            Vérifier le code OTP
           </Button>
 
           <Button
@@ -380,11 +412,19 @@ export function ResetPasswordPanel({ onBack, onSuccess }: ResetPasswordPanelProp
           </Alert>
         )}
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Button 
+          type="submit" 
+          className="w-full py-3 rounded-lg text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition" 
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Réinitialisation...
+            </div>
+          ) : (
+            "Réinitialiser le mot de passe"
           )}
-          Réinitialiser le mot de passe
         </Button>
       </form>
     </div>

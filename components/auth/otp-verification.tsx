@@ -195,7 +195,7 @@ export function OTPVerification({ email, onBack, onSuccess }: OTPVerificationPro
         <Button
           onClick={() => handleSubmit()}
           disabled={isLoading || otp.join("").length !== 6}
-          className="w-full"
+          className="w-full py-3 rounded-lg text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition"
         >
           {isLoading ? (
             <div className="flex items-center gap-2">

@@ -1,4 +1,139 @@
-import axios, { AxiosError, AxiosResponse } from 'axios'
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import { useAuthStore } from '../stores/authStore'
+
+// Variable pour éviter les requêtes simultanées pendant la mise à jour du token
+let isUpdatingToken = false
+// Variable pour stocker le dernier token reçu
+let lastReceivedToken: string | null = null
+// Variable pour indiquer si c'est la première requête /api/users/me
+let isFirstUsersMeRequest = true
+
+// Fonction pour vérifier si c'est la première requête /api/users/me de cette session
+const isFirstUsersMeRequestOfSession = () => {
+  if (typeof window === 'undefined') return true
+  
+  // Vérifier si first_auth_me existe déjà
+  const existingFirstAuthMe = localStorage.getItem('first_auth_me')
+  const isFirst = !existingFirstAuthMe && isFirstUsersMeRequest
+  
+  console.log('🔍 isFirstUsersMeRequestOfSession check:', {
+    existingFirstAuthMe: !!existingFirstAuthMe,
+    isFirstUsersMeRequest,
+    isFirst
+  })
+  
+  return isFirst
+}
+
+// Fonction pour essayer de récupérer le token de réponse de toutes les façons possibles
+const extractTokenFromResponse = (response: AxiosResponse): string | null => {
+  let token = null
+  
+  // Méthode 1: Headers directs
+  token = response.headers['authorization'] || response.headers['Authorization']
+  if (token) {
+    console.log('🔍 Found token via headers direct:', token.substring(0, 20) + '...')
+    return token
+  }
+  
+  // Méthode 2: Parcourir tous les headers
+  for (const [key, value] of Object.entries(response.headers)) {
+    if (key.toLowerCase() === 'authorization' && typeof value === 'string') {
+      token = value
+      console.log('🔍 Found token via headers iteration:', token.substring(0, 20) + '...')
+      return token
+    }
+  }
+  
+  // Méthode 3: Response data
+  if (response.data && typeof response.data === 'object') {
+    if (response.data.token && typeof response.data.token === 'string') {
+      token = response.data.token
+      console.log('🔍 Found token in response.data:', token.substring(0, 20) + '...')
+      return token
+    } else if (response.data.data && response.data.data.token && typeof response.data.data.token === 'string') {
+      token = response.data.data.token
+      console.log('🔍 Found token in response.data.data:', token.substring(0, 20) + '...')
+      return token
+    }
+  }
+  
+  // Méthode 4: Headers.get() native
+  if (typeof response.headers.get === 'function') {
+    const authHeader = response.headers.get('authorization') || response.headers.get('Authorization')
+    if (authHeader && typeof authHeader === 'string') {
+      token = authHeader
+      console.log('🔍 Found token via headers.get():', token.substring(0, 20) + '...')
+      return token
+    }
+  }
+  
+  console.log('❌ No token found in response')
+  return null
+}
+
+// Fonction pour nettoyer le token temporaire
+export const clearLastReceivedToken = () => {
+  console.log('🧹 clearLastReceivedToken called - clearing lastReceivedToken')
+  lastReceivedToken = null
+  console.log('🧹 Last received token cleared')
+}
+
+// Fonction pour réinitialiser l'état de la première requête
+export const resetFirstUsersMeRequest = () => {
+  console.log('🔄 resetFirstUsersMeRequest called - setting isFirstUsersMeRequest to true')
+  console.log('🔄 Previous value of isFirstUsersMeRequest:', isFirstUsersMeRequest)
+  isFirstUsersMeRequest = true
+  requestCounter = 0
+  console.log('🔄 Reset first /api/users/me request flag and request counter')
+  console.log('🔄 New value of isFirstUsersMeRequest:', isFirstUsersMeRequest)
+}
+
+// Variable pour stocker le token de la requête précédente
+let previousRequestToken: string | null = null
+// Compteur de requêtes pour le debugging
+let requestCounter = 0
+
+// Fonction pour comparer les tokens entre les requêtes
+export const compareTokens = (currentToken: string | null) => {
+  requestCounter++
+  if (previousRequestToken && currentToken) {
+    console.log(`🔄 Request #${requestCounter} - Token comparison:`, {
+      previousToken: `${previousRequestToken.substring(0, 20)}...`,
+      currentToken: `${currentToken.substring(0, 20)}...`,
+      tokensAreDifferent: previousRequestToken !== currentToken,
+      previousLength: previousRequestToken.length,
+      currentLength: currentToken.length
+    })
+  } else {
+    console.log(`🚀 Request #${requestCounter} - First request with token:`, currentToken ? `${currentToken.substring(0, 20)}...` : 'none')
+  }
+  previousRequestToken = currentToken
+}
+
+// Fonction pour forcer la persistance du token dans localStorage
+export const forceTokenPersistence = (token: string) => {
+  if (typeof window !== 'undefined') {
+    const currentState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
+    const updatedState = {
+      ...currentState,
+      state: {
+        ...currentState.state,
+        token: token
+      }
+    }
+    localStorage.setItem('auth-storage', JSON.stringify(updatedState))
+    console.log('💾 Token force-persisted to localStorage:', token.substring(0, 20) + '...')
+    
+    // Vérification immédiate
+    const verificationState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
+    const verificationToken = verificationState.state?.token
+    console.log('🔍 Force persistence verification:', {
+      success: verificationToken === token,
+      storedToken: verificationToken ? `${verificationToken.substring(0, 20)}...` : 'none'
+    })
+  }
+}
 
 // Configuration axios par défaut
 export const apiClient = axios.create({
@@ -12,19 +147,119 @@ export const apiClient = axios.create({
 // Intercepteur pour ajouter le token d'authentification
 apiClient.interceptors.request.use(
   (config) => {
-    // Récupérer le token depuis le store Zustand
-    const authState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
-    const token = authState.state?.token
+    // Attendre si une mise à jour de token est en cours
+    if (isUpdatingToken) {
+      console.log('⏳ Waiting for token update to complete...')
+      return new Promise((resolve) => {
+        const checkToken = () => {
+          if (!isUpdatingToken) {
+            resolve(config)
+          } else {
+            setTimeout(checkToken, 100)
+          }
+        }
+        checkToken()
+      })
+    }
+
+    // Récupérer le token depuis le store Zustand (toujours le plus récent)
+    const { token } = useAuthStore.getState()
+    
+    // Récupérer le token depuis localStorage si lastReceivedToken n'est pas disponible
+    let localStorageToken = null
+    let firstAuthMeToken = null
+    
+    if (!lastReceivedToken && typeof window !== 'undefined') {
+      const persistedState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
+      localStorageToken = persistedState.state?.token
+      if (localStorageToken) {
+        console.log('🔍 Retrieved token from localStorage:', localStorageToken.substring(0, 20) + '...')
+      }
+      
+      // Récupérer le token first_auth_me comme fallback
+      firstAuthMeToken = localStorage.getItem('first_auth_me')
+      if (firstAuthMeToken) {
+        console.log('🔍 Retrieved first_auth_me token:', firstAuthMeToken.substring(0, 20) + '...')
+      }
+    }
+    
+    // Utiliser le dernier token reçu s'il est disponible et plus récent
+    // Si pas de lastReceivedToken, utiliser first_auth_me comme fallback
+    const tokenToUse = lastReceivedToken || firstAuthMeToken || localStorageToken || token
+    
+    // Debug: Comparer les tokens disponibles
+    console.log('🔍 Token selection for request:', {
+      storeToken: token ? `${token.substring(0, 20)}...` : 'none',
+      lastReceivedToken: lastReceivedToken ? `${lastReceivedToken.substring(0, 20)}...` : 'none',
+      firstAuthMeToken: firstAuthMeToken ? `${firstAuthMeToken.substring(0, 20)}...` : 'none',
+      localStorageToken: localStorageToken ? `${localStorageToken.substring(0, 20)}...` : 'none',
+      selectedToken: tokenToUse ? `${tokenToUse.substring(0, 20)}...` : 'none',
+      usingLastReceived: !!lastReceivedToken,
+      usingFirstAuthMe: !lastReceivedToken && !!firstAuthMeToken,
+      usingLocalStorage: !lastReceivedToken && !firstAuthMeToken && !!localStorageToken,
+      tokensAreDifferent: token !== lastReceivedToken,
+      requestNumber: previousRequestToken ? 'subsequent' : 'first'
+    })
+    
+    // Log clair pour montrer le flux de rotation des tokens
+    if (lastReceivedToken) {
+      console.log('🔄 Using token from previous request for:', config.url)
+    } else if (firstAuthMeToken) {
+      console.log('🎯 Using first_auth_me token for:', config.url)
+    } else if (localStorageToken) {
+      console.log('💾 Using token from localStorage for:', config.url)
+    } else {
+      console.log('🚀 Using initial token for:', config.url)
+    }
+    
+    // Comparer avec le token de la requête précédente
+    compareTokens(tokenToUse)
+    
+    // Vérifier si le token est expiré
+    const tokenExpired = tokenToUse ? isTokenExpired(tokenToUse) : true
+    const tokenPayload = tokenToUse ? decodeToken(tokenToUse) : null
+    
+    // Vérifier si c'est la première requête /api/users/me
+    const isUsersMeRequest = config.url?.includes('/api/users/me')
+    console.log('🔍 URL check for /api/users/me:', {
+      url: config.url,
+      isUsersMeRequest,
+      includesCheck: config.url?.includes('/api/users/me')
+    })
     
     console.log('🚀 API Request:', {
       url: config.url,
       method: config.method,
-      hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'none'
+      hasToken: !!tokenToUse,
+      tokenPreview: tokenToUse ? `${tokenToUse.substring(0, 10)}...` : 'none',
+      tokenLength: tokenToUse ? tokenToUse.length : 0,
+      tokenExpired,
+      tokenExp: tokenPayload?.exp ? new Date(tokenPayload.exp * 1000).toISOString() : 'unknown',
+      currentTime: new Date().toISOString(),
+      usingLastReceivedToken: !!lastReceivedToken,
+      isUsersMeRequest,
+      isFirstUsersMeRequest: isUsersMeRequest && isFirstUsersMeRequest,
+      globalIsFirstUsersMeRequest: isFirstUsersMeRequest
     })
     
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // Marquer que ce n'est plus la première requête /api/users/me
+    if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
+      console.log('🎯 First /api/users/me request - this should return company data')
+      // On ne met pas isFirstUsersMeRequest à false ici, on attend la réponse
+    }
+    
+    if (tokenToUse) {
+      if (tokenExpired) {
+        console.warn('⚠️ Token is expired, but sending request anyway (server may return new token)')
+        
+        // Si c'est la première requête /api/users/me et que le token est expiré,
+        // on peut essayer de faire la requête quand même car le serveur peut retourner un nouveau token
+        if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
+          console.log('🎯 First /api/users/me request with expired token - server may return new token')
+        }
+      }
+      config.headers.Authorization = `Bearer ${tokenToUse}`
+      console.log('🔑 Authorization header set:', `Bearer ${tokenToUse.substring(0, 20)}...`)
     } else {
       console.warn('⚠️ No token found for authenticated request:', config.url)
     }
@@ -36,14 +271,129 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Intercepteur pour gérer les erreurs
+// Intercepteur pour gérer les réponses et la rotation des tokens
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    const isUsersMeRequest = response.config.url?.includes('/api/users/me')
+    
     console.log('✅ API Response:', {
       url: response.config.url,
       status: response.status,
-      data: response.data
+      hasCompanyData: isUsersMeRequest ? !!response.data?.company : 'N/A',
+      companyName: isUsersMeRequest ? response.data?.company?.name : 'N/A',
+      dataKeys: Object.keys(response.data || {}),
+      isFirstUsersMeRequest: isUsersMeRequest && isFirstUsersMeRequest
     })
+    
+    // Debug: Vérifier tous les headers de la réponse
+    console.log('🔍 Response headers:', {
+      authorization: response.headers['authorization'] ? 'present' : 'missing',
+      Authorization: response.headers['Authorization'] ? 'present' : 'missing',
+      authorizationValue: response.headers['authorization'] || 'none',
+      AuthorizationValue: response.headers['Authorization'] || 'none',
+      allHeaders: Object.keys(response.headers),
+      allHeadersWithValues: Object.entries(response.headers).map(([key, value]) => `${key}: ${value}`)
+    })
+    
+    // Essayer de récupérer le token de réponse de toutes les façons possibles
+    const newToken = extractTokenFromResponse(response)
+    if (newToken) {
+      console.log('🔄 New token received in response headers:', newToken.substring(0, 20) + '...')
+      
+      // Extraire le token (enlever "Bearer " si présent)
+      const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
+      
+          // Si c'est la première requête /api/users/me, stocker le token avec la clé first_auth_me
+    const isFirstRequest = isFirstUsersMeRequestOfSession()
+    
+    console.log('🔍 Checking first_auth_me conditions:', {
+      isUsersMeRequest,
+      isFirstUsersMeRequest,
+      isFirstRequest,
+      bothTrue: isUsersMeRequest && isFirstRequest,
+      url: response.config.url
+    })
+    
+    if (isUsersMeRequest && isFirstRequest) {
+      console.log('🎯 First /api/users/me request - storing token in first_auth_me')
+      
+      // Stocker le token de la requête (celui qu'on a envoyé) au lieu du token de réponse
+      const authHeader = response.config.headers?.Authorization || response.config.headers?.authorization
+      const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null
+      
+      if (requestToken) {
+        localStorage.setItem('first_auth_me', requestToken)
+        console.log('💾 Request token stored in localStorage with key "first_auth_me"')
+        
+        // Vérifier que le token a bien été stocké
+        const storedToken = localStorage.getItem('first_auth_me')
+        console.log('🔍 Verification - first_auth_me in localStorage:', {
+          hasToken: !!storedToken,
+          tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'none',
+          matchesStored: storedToken === requestToken
+        })
+      } else {
+        console.log('❌ No request token found in headers')
+      }
+      
+      // Marquer que ce n'est plus la première requête
+      isFirstUsersMeRequest = false
+      console.log('🔄 isFirstUsersMeRequest set to false')
+    } else {
+      console.log('⚠️ Not storing in first_auth_me because:', {
+        isUsersMeRequest,
+        isFirstUsersMeRequest,
+        isFirstRequest,
+        bothTrue: isUsersMeRequest && isFirstRequest
+      })
+    }
+      
+      // Stocker le dernier token reçu pour les requêtes suivantes
+      lastReceivedToken = tokenValue
+      console.log('💾 Token stored for next request:', tokenValue.substring(0, 20) + '...')
+      
+      // Mettre à jour le token dans le store Zustand
+      const { isAuthenticated, setToken } = useAuthStore.getState()
+      if (isAuthenticated) {
+        setToken(tokenValue)
+        console.log('💾 Token updated in auth store and persisted to localStorage')
+        
+        // Forcer la persistance du token dans localStorage
+        forceTokenPersistence(tokenValue)
+      }
+    } else {
+      console.log('⚠️ No new token in response headers for:', response.config.url)
+      
+      // Si c'est la première requête /api/users/me et qu'il n'y a pas de nouveau token,
+      // stocker quand même le token de la requête dans first_auth_me
+      if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
+        console.log('🎯 First /api/users/me request - storing request token in first_auth_me (no response token)')
+        
+        // Stocker le token de la requête (celui qu'on a envoyé)
+        const authHeader = response.config.headers?.Authorization || response.config.headers?.authorization
+        const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null
+        
+        if (requestToken) {
+          localStorage.setItem('first_auth_me', requestToken)
+          console.log('💾 Request token stored in localStorage with key "first_auth_me"')
+          
+          // Vérifier que le token a bien été stocké
+          const storedToken = localStorage.getItem('first_auth_me')
+          console.log('🔍 Verification - first_auth_me in localStorage:', {
+            hasToken: !!storedToken,
+            tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'none',
+            matchesStored: storedToken === requestToken
+          })
+          
+          // Marquer que ce n'est plus la première requête
+          isFirstUsersMeRequest = false
+          console.log('🔄 isFirstUsersMeRequest set to false (no response token)')
+        } else {
+          console.log('❌ No request token found in headers')
+        }
+      }
+    }
+    
     return response
   },
   (error: AxiosError) => {
@@ -57,12 +407,40 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('🔑 Unauthorized - Token expired or invalid')
       
-      // Éviter de nettoyer plusieurs fois
-      const authState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
-      if (authState.state?.isAuthenticated) {
-        console.log('🔄 Clearing auth data due to 401')
-        localStorage.removeItem('auth-storage')
-        localStorage.removeItem('temp_auth_data')
+      // Vérifier si un nouveau token est présent dans les headers de la réponse d'erreur
+      const newToken = error.response.headers['authorization'] || error.response.headers['Authorization']
+      if (newToken) {
+        console.log('🔄 New token received in 401 response headers:', newToken.substring(0, 20) + '...')
+        
+        // Extraire le token (enlever "Bearer " si présent)
+        const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
+        
+        // Stocker le dernier token reçu pour les requêtes suivantes
+        lastReceivedToken = tokenValue
+        console.log('💾 Last received token stored from 401 response')
+        
+        // Mettre à jour le token dans le store Zustand
+        const { isAuthenticated, setToken } = useAuthStore.getState()
+        if (isAuthenticated) {
+          setToken(tokenValue)
+          console.log('💾 Token updated from 401 response')
+          
+          // Forcer la persistance du token dans localStorage
+          forceTokenPersistence(tokenValue)
+        }
+      }
+      
+      // Si c'est une requête /api/users/me et qu'on n'a pas reçu de nouveau token,
+      // déconnecter l'utilisateur car le token n'est plus valide
+      if (error.config?.url?.includes('/api/users/me') && error.config?.method === 'get' && !newToken) {
+        console.log('🚨 /api/users/me returned 401 without new token - logging out user')
+        const { logout } = useAuthStore.getState()
+        logout()
+        // Rediriger vers la page de login
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+        return
       }
     }
     return Promise.reject(error)
@@ -100,4 +478,121 @@ export const formatApiResponse = <T>(response: AxiosResponse<T>) => {
     status: response.status,
     headers: response.headers,
   }
+}
+
+// Fonction utilitaire pour vérifier si un token JWT est expiré
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const currentTime = Math.floor(Date.now() / 1000)
+    return payload.exp < currentTime
+  } catch (error) {
+    console.error('❌ Error parsing JWT token:', error)
+    return true // Considérer comme expiré si on ne peut pas le parser
+  }
+}
+
+// Fonction utilitaire pour décoder un token JWT
+export const decodeToken = (token: string) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload
+  } catch (error) {
+    console.error('❌ Error decoding JWT token:', error)
+    return null
+  }
+}
+
+/**
+ * Crée une instance axios avec le token temporaire pour la connexion OTP
+ */
+export function createOTPApiClient(): AxiosInstance {
+  const tempData = localStorage.getItem('temp_auth_data')
+  if (!tempData) {
+    throw new Error('No temporary auth data found')
+  }
+  
+  const authData = JSON.parse(tempData)
+  const tempToken = authData.token
+  
+  console.log('🔢 Creating OTP API client with temp token:', tempToken ? `${tempToken.substring(0, 20)}...` : 'none')
+  
+  const otpClient = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://corporate.eazykash.com",
+    timeout: 10000,
+    headers: {
+      'Content-Type': 'application/json',
+      'authorization': `Bearer ${tempToken}`
+    }
+  })
+
+  // Intercepteur pour gérer la rotation des tokens pour OTP
+  otpClient.interceptors.response.use(
+    (response: AxiosResponse) => {
+      const newToken = response.headers['authorization'] || response.headers['Authorization']
+      if (newToken) {
+        console.log('🔄 New OTP token received:', newToken.substring(0, 20) + '...')
+        const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
+        
+        // Mettre à jour le token temporaire
+        const updatedTempData = {
+          ...authData,
+          token: tokenValue
+        }
+        localStorage.setItem('temp_auth_data', JSON.stringify(updatedTempData))
+        console.log('💾 OTP temp token updated')
+      }
+      return response
+    },
+    (error) => Promise.reject(error)
+  )
+
+  return otpClient
+}
+
+/**
+ * Crée une instance axios avec le token temporaire pour la réinitialisation de mot de passe
+ */
+export function createResetApiClient(): AxiosInstance {
+  const tempData = localStorage.getItem('temp_reset_data')
+  if (!tempData) {
+    throw new Error('No temporary reset data found')
+  }
+  
+  const resetData = JSON.parse(tempData)
+  const tempToken = resetData.token
+  
+  console.log('🔑 Creating reset API client with temp token:', tempToken ? `${tempToken.substring(0, 20)}...` : 'none')
+  
+  const resetClient = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://corporate.eazykash.com",
+    timeout: 10000,
+    headers: {
+      'Content-Type': 'application/json',
+      'authorization': `Bearer ${tempToken}`
+    }
+  })
+
+  // Intercepteur pour gérer la rotation des tokens pour Reset
+  resetClient.interceptors.response.use(
+    (response: AxiosResponse) => {
+      const newToken = response.headers['authorization'] || response.headers['Authorization']
+      if (newToken) {
+        console.log('🔄 New reset token received:', newToken.substring(0, 20) + '...')
+        const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
+        
+        // Mettre à jour le token temporaire
+        const updatedTempData = {
+          ...resetData,
+          token: tokenValue
+        }
+        localStorage.setItem('temp_reset_data', JSON.stringify(updatedTempData))
+        console.log('💾 Reset temp token updated')
+      }
+      return response
+    },
+    (error) => Promise.reject(error)
+  )
+
+  return resetClient
 } 

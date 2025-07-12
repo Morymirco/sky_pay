@@ -1,59 +1,50 @@
 "use client"
 
+import { useAuthStore } from "@/lib/stores/authStore"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { AuthSkeleton } from "@/components/auth-skeleton"
 
 interface AuthGuardProps {
   children: React.ReactNode
+  fallback?: React.ReactNode
 }
 
-export default function AuthGuard({ children }: AuthGuardProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+export function AuthGuard({ children, fallback }: AuthGuardProps) {
+  const { isAuthenticated, user, token } = useAuthStore()
   const router = useRouter()
-  const pathname = usePathname()
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = () => {
-      const token = localStorage.getItem("sky_pay_auth_token")
-      const isLoginPage = pathname === "/login"
-      
-      if (!token && !isLoginPage) {
-        // Redirect to login if not authenticated
-        router.push("/login")
-        return
-      }
-      
-      if (token && isLoginPage) {
-        // Redirect to dashboard if already authenticated
-        router.push("/")
-        return
-      }
-      
-      setIsAuthenticated(!!token)
-      setIsLoading(false)
+    console.log('🔒 AuthGuard check:', { 
+      isAuthenticated, 
+      hasUser: !!user, 
+      hasToken: !!token,
+      userEmail: user?.email 
+    })
+
+    // Vérifier si l'utilisateur est authentifié
+    if (!isAuthenticated || !user || !token) {
+      console.log('❌ AuthGuard: Not authenticated, redirecting to login')
+      router.push('/login')
+      return
     }
 
-    checkAuth()
-  }, [pathname, router])
+    // Si tout est OK, autoriser l'accès
+    console.log('✅ AuthGuard: User authenticated, allowing access')
+    setIsChecking(false)
+  }, [isAuthenticated, user, token, router])
 
-  // Show loading spinner while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-neutral-400 text-sm">INITIALIZING SECURE CONNECTION...</p>
-        </div>
-      </div>
-    )
+  // Afficher le fallback pendant la vérification
+  if (isChecking) {
+    return fallback || <AuthSkeleton />
   }
 
-  // Don't render children for login page (it has its own layout)
-  if (pathname === "/login") {
+  // Si pas authentifié, ne rien afficher (redirection en cours)
+  if (!isAuthenticated || !user || !token) {
     return null
   }
 
+  // Afficher le contenu protégé
   return <>{children}</>
 } 

@@ -101,11 +101,19 @@ export function ForgotPasswordPanel({ onBack, onOTPSent }: ForgotPasswordPanelPr
           </Alert>
         )}
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Button 
+          type="submit" 
+          className="w-full py-3 rounded-lg text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition" 
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Envoi en cours...
+            </div>
+          ) : (
+            "Envoyer le code OTP"
           )}
-          Envoyer le code OTP
         </Button>
       </form>
     </div>

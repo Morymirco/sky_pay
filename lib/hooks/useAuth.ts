@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { authService } from '../services/auth'
 import { useAuthStore } from '../stores/authStore'
-import { LoginCredentials, LoginResponse, OTPVerificationRequest, PasswordChangeRequest } from '../types/auth'
+import { LoginCredentials, LoginResponse, OTPVerificationRequest, PasswordChangeRequest, User } from '../types/auth'
 import { handleApiError } from '../utils/api'
 
 export function useAuth() {
@@ -76,16 +76,38 @@ export function useAuth() {
         const isFirstLogin = data.first_login || false
         
         if (finalToken) {
+          console.log('🔐 About to call storeLogin with:', {
+            userEmail: authData.user?.email,
+            tokenLength: finalToken.length,
+            tokenPreview: finalToken.substring(0, 20) + '...',
+            isFirstLogin: isFirstLogin
+          })
+          
           storeLogin({
             user: authData.user,
             token: finalToken,
             isAuthenticated: true,
             isFirstLogin: isFirstLogin
           })
+          
           localStorage.removeItem('temp_auth_data')
           console.log('🎉 Full authentication completed with token:', finalToken.substring(0, 20) + '...')
           console.log('🎉 First login:', isFirstLogin)
+          
+          // Debug: Vérifier localStorage après storeLogin
+          setTimeout(() => {
+            const persistedState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
+            console.log('🔍 localStorage after storeLogin:', {
+              hasState: !!persistedState.state,
+              storedToken: persistedState.state?.token ? `${persistedState.state.token.substring(0, 10)}...` : 'none',
+              tokenLength: persistedState.state?.token ? persistedState.state.token.length : 0,
+              isAuthenticated: persistedState.state?.isAuthenticated,
+              userEmail: persistedState.state?.user?.email
+            })
+          }, 200)
+          
           // Redirection seulement si l'authentification est complète
+          console.log('🚀 Redirecting to dashboard - first /api/users/me request will be made')
           router.push('/dashboard')
         } else {
           console.error('❌ No token found in OTP response')
@@ -139,17 +161,7 @@ export function useAuth() {
     queryFn: authService.getCurrentUser,
     enabled: false, // Désactivée pour l'instant
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false, // Pas de retry automatique
-    onError: (error) => {
-      console.error('❌ Current user query failed:', error)
-      // Éviter la boucle infinie en vérifiant si on est déjà en train de se déconnecter
-      if (isAuthenticated) {
-        console.log('🔄 Logging out due to auth error')
-        storeLogout()
-        queryClient.clear()
-        router.push('/login')
-      }
-    }
+    retry: false // Pas de retry automatique
   })
 
   // Change password mutation
@@ -163,9 +175,9 @@ export function useAuth() {
     }
   })
 
-  // Forgot password mutation
-  const forgotPasswordMutation = useMutation({
-    mutationFn: authService.forgotPassword,
+  // Request password reset OTP mutation
+  const requestPasswordResetOTPMutation = useMutation({
+    mutationFn: authService.requestPasswordResetOTP,
     onError: (error) => {
       setError(handleApiError(error))
     }
@@ -201,8 +213,8 @@ export function useAuth() {
     resendOTP: (email: string) => resendOTPMutation.mutate(email),
     logout: () => logoutMutation.mutate(),
     changePassword: (data: PasswordChangeRequest) => changePasswordMutation.mutate(data),
-    forgotPassword: (email: string) => forgotPasswordMutation.mutate({ email }),
-    updateProfile: (profileData: Partial<typeof user>) => updateProfileMutation.mutate(profileData),
+    requestPasswordResetOTP: (email: string) => requestPasswordResetOTPMutation.mutate(email),
+    updateProfile: (profileData: Partial<User>) => updateProfileMutation.mutate(profileData),
     clearError,
     
     // Mutations state
@@ -211,7 +223,7 @@ export function useAuth() {
     isResendingOTP: resendOTPMutation.isPending,
     isLogoutLoading: logoutMutation.isPending,
     isChangePasswordLoading: changePasswordMutation.isPending,
-    isForgotPasswordLoading: forgotPasswordMutation.isPending,
+    isRequestPasswordResetOTPLoading: requestPasswordResetOTPMutation.isPending,
     isUpdateProfileLoading: updateProfileMutation.isPending,
     
     // Query state

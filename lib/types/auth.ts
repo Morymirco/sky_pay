@@ -47,6 +47,11 @@ export interface OTPVerificationResponse {
   success: boolean
   message: string
   token: string
+  first_login?: boolean
+  data?: {
+    token: string
+    user: User
+  }
 }
 
 export interface ChangePasswordRequest {

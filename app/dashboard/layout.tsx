@@ -1,5 +1,6 @@
 "use client"
 
+import { AuthGuard } from "@/components/auth-guard"
 import { ChangePasswordModal } from "@/components/auth/change-password-modal"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Badge } from "@/components/ui/badge"
@@ -93,8 +94,13 @@ export default function DashboardLayout({
 
   const handleLogout = () => {
     console.log('🚪 Logging out user...')
-    localStorage.removeItem("sky_pay_auth_token")
-    router.push("/")
+    // Utiliser le store Zustand pour la déconnexion
+    const { logout } = useAuthStore.getState()
+    logout()
+    // Nettoyer les données temporaires
+    localStorage.removeItem('temp_auth_data')
+    localStorage.removeItem('temp_reset_data')
+    router.push("/login")
   }
 
   const getNotificationIcon = (type: string) => {
@@ -179,7 +185,8 @@ export default function DashboardLayout({
   ]
 
   return (
-    <div className="flex h-screen">
+    <AuthGuard>
+      <div className="flex h-screen">
       {/* Sidebar */}
       <div
         className={`${sidebarCollapsed ? "w-16" : "w-70"} bg-muted border-r border-border transition-all duration-300 fixed md:relative z-50 md:z-auto h-full md:h-auto ${!sidebarCollapsed ? "md:block" : ""} relative`}
@@ -540,5 +547,6 @@ export default function DashboardLayout({
         />
       )}
     </div>
+    </AuthGuard>
   )
 } 

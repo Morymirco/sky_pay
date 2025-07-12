@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { QueryProvider } from '@/lib/providers/query-provider'
-import { AuthCheckProvider } from '@/lib/providers/auth-check-provider'
+import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'Sky Pay - Transfert d\'argent',
@@ -25,9 +25,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthCheckProvider>
+            <AuthProvider>
               {children}
-            </AuthCheckProvider>
+            </AuthProvider>
           </ThemeProvider>
         </QueryProvider>
       </body>
