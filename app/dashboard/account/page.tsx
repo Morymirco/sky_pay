@@ -3,18 +3,43 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useCompanyUsers } from "@/lib/hooks/useCompanyUsers"
-import { Edit, Plus, RefreshCw, Shield, Trash2, User } from "lucide-react"
+import { useCreateUser } from "@/lib/hooks/useCreateUser"
+import { useRoles } from "@/lib/hooks/useRoles"
+import { Edit, Plus, RefreshCw, Shield, Trash2, User, X } from "lucide-react"
 import { useState } from "react"
 
 export default function AccountPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [showCreateModal, setShowCreateModal] = useState(false)
   
   // Hook React Query pour récupérer les utilisateurs
   const { data: usersData, isLoading, error, refetch } = useCompanyUsers()
   
-  const users = usersData?.data || []
+  // Hook React Query pour récupérer les rôles
+  const { data: rolesData, isLoading: isLoadingRoles } = useRoles()
   
+  // Hook React Query pour créer un utilisateur
+  const createUserMutation = useCreateUser()
+  
+  const users = usersData?.data || []
+  const roles = rolesData || []
+  
+  // État du formulaire de création
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    username: "",
+    email: "",
+    roleId: "",
+    is_active: true
+  })
+
   // Filtrer les utilisateurs selon la recherche
   const filteredUsers = users.filter((user) =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,6 +75,70 @@ export default function AccountPage() {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+    })
+  }
+
+  const handleCreateUser = async () => {
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.username.trim() || !formData.email.trim() || !formData.roleId) {
+      alert("Veuillez remplir tous les champs obligatoires")
+      return
+    }
+
+    try {
+      const userData = {
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        username: formData.username.trim(),
+        email: formData.email.toLowerCase().trim(),
+        roleId: parseInt(formData.roleId),
+        is_active: formData.is_active,
+        is_first_login: true
+      }
+      
+      console.log("Création de l'utilisateur:", userData)
+      
+      const result = await createUserMutation.mutateAsync(userData)
+      
+      if (result.success) {
+        // Fermer le modal et réinitialiser le formulaire
+        setShowCreateModal(false)
+        setFormData({
+          first_name: "",
+          last_name: "",
+          username: "",
+          email: "",
+          roleId: "",
+          is_active: true
+        })
+        
+        // Recharger manuellement la liste des utilisateurs
+        refetch()
+        
+        alert(`Utilisateur créé avec succès ! ${result.data.emailMessage}`)
+      } else {
+        alert("Erreur lors de la création. Veuillez réessayer.")
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création:", error)
+      alert("Erreur lors de la création. Veuillez réessayer.")
+    }
+  }
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const resetForm = () => {
+    setFormData({
+      first_name: "",
+      last_name: "",
+      username: "",
+      email: "",
+      roleId: "",
+      is_active: true
     })
   }
 
@@ -89,9 +178,12 @@ export default function AccountPage() {
             )}
             Actualiser
           </Button>
-          <Button className="bg-blue-500 hover:bg-blue-600 text-foreground">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvel Utilisateur
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-foreground"
+          >
+          <Plus className="w-4 h-4 mr-2" />
+          Nouvel Utilisateur
           </Button>
         </div>
       </div>
@@ -170,18 +262,18 @@ export default function AccountPage() {
                 </div>
               </div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">UTILISATEUR</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">EMAIL</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÔLE</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DERNIÈRE CONNEXION</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">UTILISATEUR</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">EMAIL</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÔLE</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">DERNIÈRE CONNEXION</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-muted-foreground">
@@ -190,64 +282,204 @@ export default function AccountPage() {
                     </tr>
                   ) : (
                     filteredUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="table-row-hover"
-                      >
-                        <td className="py-3 px-4">
+                  <tr
+                    key={user.id}
+                    className="table-row-hover"
+                  >
+                    <td className="py-3 px-4">
                           <div className="text-sm text-foreground font-medium">
                             {user.first_name} {user.last_name}
                           </div>
                           <div className="text-xs text-muted-foreground">@{user.username}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-foreground">{user.email}</span>
-                        </td>
-                                                  <td className="py-3 px-4">
-                            <Badge className={getRoleColor(user.Role?.name || '')}>
-                              {getRoleLabel(user.Role?.name || '')}
-                            </Badge>
-                          </td>
-                        <td className="py-3 px-4">
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-foreground">{user.email}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                          <Badge className={getRoleColor(user.Role?.name || '')}>
+                            {getRoleLabel(user.Role?.name || '')}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
                           <Badge className={user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
                             {user.is_active ? "Actif" : "Inactif"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-foreground">
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-foreground">
                             {formatDate(user.updatedAt)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="edit-button-hover button-hover"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="delete-button-hover button-hover"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="edit-button-hover button-hover"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="delete-button-hover button-hover"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                     ))
                   )}
-                </tbody>
-              </table>
+              </tbody>
+            </table>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Roles Information */}
+      {/* Modal de création d'utilisateur */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Créer un nouvel utilisateur
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCreateModal(false)}
+                className="h-6 w-6"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-6">
+            {/* Colonne gauche */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">Prénom *</Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => handleInputChange("first_name", e.target.value)}
+                    placeholder="Prénom"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Nom *</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => handleInputChange("last_name", e.target.value)}
+                    placeholder="Nom"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="username">Nom d'utilisateur *</Label>
+                <Input
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => handleInputChange("username", e.target.value)}
+                  placeholder="nom.utilisateur"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+            </div>
+            
+            {/* Colonne droite */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="role">Rôle *</Label>
+                <Select value={formData.roleId} onValueChange={(value) => handleInputChange("roleId", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un rôle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingRoles ? (
+                      <SelectItem value="" disabled>Chargement des rôles...</SelectItem>
+                    ) : roles.length === 0 ? (
+                      <SelectItem value="" disabled>Aucun rôle disponible</SelectItem>
+                    ) : (
+                      roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id.toString()}>
+                          {role.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Utilisateur actif</Label>
+                  <p className="text-xs text-muted-foreground">L'utilisateur pourra se connecter</p>
+                </div>
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => handleInputChange("is_active", checked)}
+                />
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  <strong>Note :</strong> Un mot de passe temporaire sera généré automatiquement. 
+                  L'utilisateur devra le changer lors de sa première connexion.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 pt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateModal(false)
+                resetForm()
+              }}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={createUserMutation.isPending}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {createUserMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Création...
+                </div>
+              ) : (
+                "Créer l'utilisateur"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Roles Information - Commenté car les rôles ne sont pas connus à l'avance */}
+      {/* 
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-foreground tracking-wider">INFORMATION SUR LES RÔLES</CardTitle>
@@ -281,6 +513,7 @@ export default function AccountPage() {
           </div>
         </CardContent>
       </Card>
+      */}
     </div>
   )
 } 

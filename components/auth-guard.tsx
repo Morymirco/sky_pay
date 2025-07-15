@@ -1,9 +1,9 @@
 "use client"
 
+import { AuthSkeleton } from "@/components/auth-skeleton"
 import { useAuthStore } from "@/lib/stores/authStore"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { AuthSkeleton } from "@/components/auth-skeleton"
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -20,20 +20,23 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
       isAuthenticated, 
       hasUser: !!user, 
       hasToken: !!token,
-      userEmail: user?.email 
+      userEmail: user?.email,
+      hasUserRole: !!user?.Role,
+      hasPermissions: !!user?.Role?.permissions
     })
 
-    // Vérifier si l'utilisateur est authentifié
-    if (!isAuthenticated || !user || !token) {
+    // Vérifier si l'utilisateur est authentifié (token suffit)
+    if (!isAuthenticated || !token) {
       console.log('❌ AuthGuard: Not authenticated, redirecting to login')
       router.push('/login')
       return
     }
 
-    // Si tout est OK, autoriser l'accès
-    console.log('✅ AuthGuard: User authenticated, allowing access')
+    // Si authentifié avec token, autoriser l'accès même si les données utilisateur ne sont pas complètes
+    // Les données utilisateur seront chargées par useAuthCheck
+    console.log('✅ AuthGuard: User authenticated with token, allowing access')
     setIsChecking(false)
-  }, [isAuthenticated, user, token, router])
+  }, [isAuthenticated, token, router])
 
   // Afficher le fallback pendant la vérification
   if (isChecking) {
@@ -41,7 +44,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   }
 
   // Si pas authentifié, ne rien afficher (redirection en cours)
-  if (!isAuthenticated || !user || !token) {
+  if (!isAuthenticated || !token) {
     return null
   }
 

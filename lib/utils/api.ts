@@ -392,7 +392,7 @@ apiClient.interceptors.response.use(
       // marquer quand même que ce n'est plus la première requête
       if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
         console.log('🎯 First /api/users/me request completed (no new token) - marking as not first anymore')
-        isFirstUsersMeRequest = false
+          isFirstUsersMeRequest = false
         console.log('🔄 isFirstUsersMeRequest set to false (no new token)')
       }
     }

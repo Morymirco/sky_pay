@@ -2,9 +2,20 @@ import { useAuthStore } from '../stores/authStore'
 import { PermissionItem, SubMenuPermission } from '../types/auth'
 
 export function usePermissions() {
-  const { user } = useAuthStore()
+  const { user, isLoading } = useAuthStore()
   
   const permissions = user?.Role?.permissions
+
+  // Debug: Afficher les données utilisateur et permissions
+  console.log('🔍 usePermissions hook debug:', {
+    user,
+    isLoading,
+    hasUser: !!user,
+    hasRole: !!user?.Role,
+    permissions,
+    accueilPermissions: permissions?.accueil?.permissions,
+    isAdmin: permissions?.isAdmin
+  })
 
   // Vérifier si l'utilisateur a une permission spécifique
   const hasPermission = (permissionPath: string): boolean => {
@@ -97,6 +108,7 @@ export function usePermissions() {
   return {
     // État
     permissions,
+    isLoading,
     isAdmin: isAdmin(),
     canManageRoles: canManageRoles(),
     canManageUsers: canManageUsers(),

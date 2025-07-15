@@ -157,6 +157,7 @@ export const authService = {
       companyId: number
       createdAt: string
       updatedAt: string
+      last_login: string
       Role: {
         id: number
         name: string
@@ -168,6 +169,31 @@ export const authService = {
   }> {
     const { data } = await apiClient.get('/api/users/company-users')
     console.log('👥 Company users response:', data)
+    return data
+  },
+
+  // Create user
+  async createUser(userData: {
+    first_name: string
+    last_name: string
+    username: string
+    email: string
+    roleId: number
+    is_active: boolean
+    is_first_login: boolean
+  }): Promise<{
+    success: boolean
+    message: string
+    data: {
+      user: any
+      emailSent: boolean
+      emailMessage: string
+      temporaryPassword: string
+    }
+    newToken?: string
+  }> {
+    const { data } = await apiClient.post('/api/users/create', userData)
+    console.log('👤 Create user response:', data)
     return data
   }
 } 

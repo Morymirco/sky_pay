@@ -106,9 +106,40 @@ export function useAuth() {
             })
           }, 200)
           
-          // Redirection seulement si l'authentification est complète
-          console.log('🚀 Redirecting to dashboard - first /api/users/me request will be made')
-          router.push('/dashboard')
+          // Faire un appel explicite à /api/users/me pour récupérer les données complètes et le newToken
+          console.log('📊 Making explicit call to /api/users/me to get complete user data and newToken...')
+          
+          // Utiliser apiClient pour bénéficier des intercepteurs
+          import('../utils/api').then(({ apiClient }) => {
+            apiClient.get('/api/users/me')
+              .then((response) => {
+                const userData = response.data
+                console.log('✅ Complete user data loaded after login:', {
+                  hasUser: !!userData.user,
+                  hasRole: !!userData.role,
+                  hasPermissions: !!userData.role?.permissions,
+                  hasNewToken: !!userData.newToken,
+                  accueilPermissions: userData.role?.permissions?.accueil?.permissions
+                })
+                
+                // Mettre à jour le store avec les données complètes
+                useAuthStore.getState().setUser(userData.user)
+                useAuthStore.getState().setRole(userData.role)
+                useAuthStore.getState().setPermissions(userData.role?.permissions)
+                
+                console.log('💾 Store updated with complete user data after login')
+                
+                // Redirection vers le dashboard
+                console.log('🚀 Redirecting to dashboard with complete user data')
+                router.push('/dashboard')
+              })
+              .catch((error) => {
+                console.error('❌ Failed to load complete user data after login:', error)
+                // Rediriger quand même vers le dashboard, les données seront chargées par useAuthCheck
+                console.log('🚀 Redirecting to dashboard anyway, user data will be loaded by useAuthCheck')
+                router.push('/dashboard')
+              })
+          })
         } else {
           console.error('❌ No token found in OTP response')
           setError('Token non trouvé dans la réponse OTP')
