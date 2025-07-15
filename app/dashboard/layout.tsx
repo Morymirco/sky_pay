@@ -164,6 +164,7 @@ export default function DashboardLayout({
     if (pathname === "/dashboard/recharge-requests") return "DEMANDES DE RECHARGEMENT"
     if (pathname === "/dashboard/account") return "GESTION DE COMPTE"
     if (pathname === "/dashboard/settings") return "PARAMÈTRES"
+    if (pathname === "/dashboard/settings/roles") return "GESTION DES RÔLES"
     if (pathname === "/dashboard/settings/create-role") return "CRÉER UN RÔLE"
     return "DASHBOARD"
   }
@@ -180,8 +181,9 @@ export default function DashboardLayout({
   ]
 
   const settingsSubItems = [
-    { id: "create-role", icon: UserPlus, label: "CRÉER UN RÔLE", href: "/dashboard/settings/create-role" },
     { id: "settings", icon: Settings, label: "PARAMÈTRES GÉNÉRAUX", href: "/dashboard/settings" },
+    { id: "roles", icon: UserPlus, label: "GESTION DES RÔLES", href: "/dashboard/settings/roles" },
+    { id: "create-role", icon: UserPlus, label: "CRÉER UN RÔLE", href: "/dashboard/settings/create-role" },
   ]
 
   return (

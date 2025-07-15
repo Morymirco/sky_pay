@@ -1,12 +1,12 @@
 import {
-  AuthResponse,
-  LoginCredentials,
-  LoginResponse,
-  OTPVerificationRequest,
-  OTPVerificationResponse,
-  PasswordChangeRequest,
-  RefreshTokenResponse,
-  User
+    LoginCredentials,
+    LoginResponse,
+    OTPVerificationRequest,
+    OTPVerificationResponse,
+    PasswordChangeRequest,
+    RefreshTokenResponse,
+    Role,
+    User
 } from '../types/auth'
 import { apiClient, createOTPApiClient, createResetApiClient } from '../utils/api'
 
@@ -33,7 +33,7 @@ export const authService = {
   },
 
   // Renvoyer OTP
-  async resendOTP(email: string): Promise<AuthResponse> {
+  async resendOTP(email: string): Promise<{ message: string }> {
     const otpApiClient = createOTPApiClient()
     
     console.log('📧 Resending OTP')
@@ -70,6 +70,8 @@ export const authService = {
       createdAt: string
       updatedAt: string
     }
+    role: Role
+    newToken?: string
   }> {
     const { data } = await apiClient.get('/api/users/me')
     console.log('📊 Raw API response from /api/users/me:', data)
@@ -93,7 +95,7 @@ export const authService = {
 
   // Update profile
   async updateProfile(profileData: Partial<User>): Promise<User> {
-    const { data } = await apiClient.put('/api/auth/profile', profileData)
+    const { data } = await apiClient.put('/api/users/profile', profileData)
     return data
   },
 

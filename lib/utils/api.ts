@@ -1,4 +1,9 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import {
+  showAuthErrorToast,
+  showSessionExpiredToast,
+  showTokenRefreshToast
+} from '../services/sessionToast'
 import { useAuthStore } from '../stores/authStore'
 
 // Variable pour éviter les requêtes simultanées pendant la mise à jour du token
@@ -12,12 +17,10 @@ let isFirstUsersMeRequest = true
 const isFirstUsersMeRequestOfSession = () => {
   if (typeof window === 'undefined') return true
   
-  // Vérifier si first_auth_me existe déjà
-  const existingFirstAuthMe = localStorage.getItem('first_auth_me')
-  const isFirst = !existingFirstAuthMe && isFirstUsersMeRequest
+  // Vérifier si c'est la première requête de cette session
+  const isFirst = isFirstUsersMeRequest
   
   console.log('🔍 isFirstUsersMeRequestOfSession check:', {
-    existingFirstAuthMe: !!existingFirstAuthMe,
     isFirstUsersMeRequest,
     isFirst
   })
@@ -29,46 +32,96 @@ const isFirstUsersMeRequestOfSession = () => {
 const extractTokenFromResponse = (response: AxiosResponse): string | null => {
   let token = null
   
-  // Méthode 1: Headers directs
+  console.log('🔍 🔍 🔍 DÉBUT extractTokenFromResponse 🔍 🔍 🔍')
+  console.log('🔍 Response object structure:', {
+    hasHeaders: !!response.headers,
+    headersType: typeof response.headers,
+    headersKeys: Object.keys(response.headers || {}),
+    hasData: !!response.data,
+    dataType: typeof response.data,
+    dataKeys: response.data && typeof response.data === 'object' ? Object.keys(response.data) : []
+  })
+  
+  // NOUVELLE LOGIQUE: Chercher le token dans le body de la réponse
+  if (response.data && typeof response.data === 'object') {
+    console.log('🔍 Checking response.data for newToken:')
+    console.log('🔍 response.data keys:', Object.keys(response.data))
+    
+    const responseData = response.data as any
+    
+    // Méthode 1: Vérifier directement response.data.newToken
+    if (responseData.newToken && typeof responseData.newToken === 'string') {
+      token = responseData.newToken
+      console.log('🔍 Found token in response.data.newToken:', token.substring(0, 20) + '...')
+      return token
+    }
+    
+    // Méthode 2: Vérifier dans response.data.data.newToken
+    if (responseData.data && typeof responseData.data === 'object') {
+      console.log('🔍 response.data.data keys:', Object.keys(responseData.data))
+      if (responseData.data.newToken && typeof responseData.data.newToken === 'string') {
+        token = responseData.data.newToken
+        console.log('🔍 Found token in response.data.data.newToken:', token.substring(0, 20) + '...')
+        return token
+      }
+    }
+    
+    // Méthode 3: Vérifier dans response.data.token (fallback)
+    if (responseData.token && typeof responseData.token === 'string') {
+      token = responseData.token
+      console.log('🔍 Found token in response.data.token (fallback):', token.substring(0, 20) + '...')
+      return token
+    }
+    
+    // Méthode 4: Vérifier dans response.data.data.token (fallback)
+    if (responseData.data && responseData.data.token && typeof responseData.data.token === 'string') {
+      token = responseData.data.token
+      console.log('🔍 Found token in response.data.data.token (fallback):', token.substring(0, 20) + '...')
+      return token
+    }
+    
+    // Méthode 5: Vérifier dans response.data.access_token (fallback)
+    if (responseData.access_token && typeof responseData.access_token === 'string') {
+      token = responseData.access_token
+      console.log('🔍 Found token in response.data.access_token (fallback):', token.substring(0, 20) + '...')
+      return token
+    }
+  }
+  
+  // ANCIENNE LOGIQUE (gardée comme fallback): Headers directs
+  console.log('🔍 No newToken found in response body, checking headers as fallback...')
   token = response.headers['authorization'] || response.headers['Authorization']
   if (token) {
-    console.log('🔍 Found token via headers direct:', token.substring(0, 20) + '...')
+    console.log('🔍 Found token via headers direct (fallback):', token.substring(0, 20) + '...')
     return token
   }
   
-  // Méthode 2: Parcourir tous les headers
+  // Parcourir tous les headers avec plus de détails
+  console.log('🔍 Iterating through all headers:')
   for (const [key, value] of Object.entries(response.headers)) {
-    if (key.toLowerCase() === 'authorization' && typeof value === 'string') {
+    console.log(`🔍 Header: "${key}" = "${value}" (type: ${typeof value})`)
+    if (key.toLowerCase().includes('authorization') && typeof value === 'string') {
       token = value
-      console.log('🔍 Found token via headers iteration:', token.substring(0, 20) + '...')
+      console.log('🔍 Found token via headers iteration (fallback):', token.substring(0, 20) + '...')
       return token
     }
   }
   
-  // Méthode 3: Response data
-  if (response.data && typeof response.data === 'object') {
-    if (response.data.token && typeof response.data.token === 'string') {
-      token = response.data.token
-      console.log('🔍 Found token in response.data:', token.substring(0, 20) + '...')
-      return token
-    } else if (response.data.data && response.data.data.token && typeof response.data.data.token === 'string') {
-      token = response.data.data.token
-      console.log('🔍 Found token in response.data.data:', token.substring(0, 20) + '...')
-      return token
-    }
-  }
-  
-  // Méthode 4: Headers.get() native
+  // Headers.get() native (si disponible)
   if (typeof response.headers.get === 'function') {
-    const authHeader = response.headers.get('authorization') || response.headers.get('Authorization')
+    console.log('🔍 Trying headers.get() method:')
+    const authHeader = response.headers.get('authorization') || 
+                      response.headers.get('Authorization') ||
+                      response.headers.get('x-authorization') ||
+                      response.headers.get('X-Authorization')
     if (authHeader && typeof authHeader === 'string') {
       token = authHeader
-      console.log('🔍 Found token via headers.get():', token.substring(0, 20) + '...')
+      console.log('🔍 Found token via headers.get() (fallback):', token.substring(0, 20) + '...')
       return token
     }
   }
   
-  console.log('❌ No token found in response')
+  console.log('❌ ❌ ❌ FIN extractTokenFromResponse - Aucun token trouvé ❌ ❌ ❌')
   return null
 }
 
@@ -77,6 +130,24 @@ export const clearLastReceivedToken = () => {
   console.log('🧹 clearLastReceivedToken called - clearing lastReceivedToken')
   lastReceivedToken = null
   console.log('🧹 Last received token cleared')
+}
+
+// Fonction pour nettoyer tous les tokens temporaires (appelée lors du logout)
+export const clearAllTemporaryTokens = () => {
+  console.log('🧹 clearAllTemporaryTokens called - clearing all temporary tokens')
+  lastReceivedToken = null
+  isFirstUsersMeRequest = true
+  requestCounter = 0
+  previousRequestToken = null
+  
+  // Nettoyer les tokens temporaires du localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('first_auth_me')
+    localStorage.removeItem('temp_auth_data')
+    localStorage.removeItem('temp_reset_data')
+  }
+  
+  console.log('🧹 All temporary tokens cleared')
 }
 
 // Fonction pour réinitialiser l'état de la première requête
@@ -167,7 +238,6 @@ apiClient.interceptors.request.use(
     
     // Récupérer le token depuis localStorage si lastReceivedToken n'est pas disponible
     let localStorageToken = null
-    let firstAuthMeToken = null
     
     if (!lastReceivedToken && typeof window !== 'undefined') {
       const persistedState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
@@ -175,37 +245,26 @@ apiClient.interceptors.request.use(
       if (localStorageToken) {
         console.log('🔍 Retrieved token from localStorage:', localStorageToken.substring(0, 20) + '...')
       }
-      
-      // Récupérer le token first_auth_me comme fallback
-      firstAuthMeToken = localStorage.getItem('first_auth_me')
-      if (firstAuthMeToken) {
-        console.log('🔍 Retrieved first_auth_me token:', firstAuthMeToken.substring(0, 20) + '...')
-      }
     }
     
-    // Utiliser le dernier token reçu s'il est disponible et plus récent
-    // Si pas de lastReceivedToken, utiliser first_auth_me comme fallback
-    const tokenToUse = lastReceivedToken || firstAuthMeToken || localStorageToken || token
+    // Priorité des tokens : lastReceivedToken > localStorageToken > storeToken
+    const tokenToUse = lastReceivedToken || localStorageToken || token
     
     // Debug: Comparer les tokens disponibles
     console.log('🔍 Token selection for request:', {
       storeToken: token ? `${token.substring(0, 20)}...` : 'none',
       lastReceivedToken: lastReceivedToken ? `${lastReceivedToken.substring(0, 20)}...` : 'none',
-      firstAuthMeToken: firstAuthMeToken ? `${firstAuthMeToken.substring(0, 20)}...` : 'none',
       localStorageToken: localStorageToken ? `${localStorageToken.substring(0, 20)}...` : 'none',
       selectedToken: tokenToUse ? `${tokenToUse.substring(0, 20)}...` : 'none',
       usingLastReceived: !!lastReceivedToken,
-      usingFirstAuthMe: !lastReceivedToken && !!firstAuthMeToken,
-      usingLocalStorage: !lastReceivedToken && !firstAuthMeToken && !!localStorageToken,
-      tokensAreDifferent: token !== lastReceivedToken,
+      usingLocalStorage: !lastReceivedToken && !!localStorageToken,
+      usingStore: !lastReceivedToken && !localStorageToken && !!token,
       requestNumber: previousRequestToken ? 'subsequent' : 'first'
     })
     
     // Log clair pour montrer le flux de rotation des tokens
     if (lastReceivedToken) {
       console.log('🔄 Using token from previous request for:', config.url)
-    } else if (firstAuthMeToken) {
-      console.log('🎯 Using first_auth_me token for:', config.url)
     } else if (localStorageToken) {
       console.log('💾 Using token from localStorage for:', config.url)
     } else {
@@ -298,55 +357,10 @@ apiClient.interceptors.response.use(
     // Essayer de récupérer le token de réponse de toutes les façons possibles
     const newToken = extractTokenFromResponse(response)
     if (newToken) {
-      console.log('🔄 New token received in response headers:', newToken.substring(0, 20) + '...')
+      console.log('🔄 New token received in response body:', newToken.substring(0, 20) + '...')
       
       // Extraire le token (enlever "Bearer " si présent)
       const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
-      
-          // Si c'est la première requête /api/users/me, stocker le token avec la clé first_auth_me
-    const isFirstRequest = isFirstUsersMeRequestOfSession()
-    
-    console.log('🔍 Checking first_auth_me conditions:', {
-      isUsersMeRequest,
-      isFirstUsersMeRequest,
-      isFirstRequest,
-      bothTrue: isUsersMeRequest && isFirstRequest,
-      url: response.config.url
-    })
-    
-    if (isUsersMeRequest && isFirstRequest) {
-      console.log('🎯 First /api/users/me request - storing token in first_auth_me')
-      
-      // Stocker le token de la requête (celui qu'on a envoyé) au lieu du token de réponse
-      const authHeader = response.config.headers?.Authorization || response.config.headers?.authorization
-      const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null
-      
-      if (requestToken) {
-        localStorage.setItem('first_auth_me', requestToken)
-        console.log('💾 Request token stored in localStorage with key "first_auth_me"')
-        
-        // Vérifier que le token a bien été stocké
-        const storedToken = localStorage.getItem('first_auth_me')
-        console.log('🔍 Verification - first_auth_me in localStorage:', {
-          hasToken: !!storedToken,
-          tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'none',
-          matchesStored: storedToken === requestToken
-        })
-      } else {
-        console.log('❌ No request token found in headers')
-      }
-      
-      // Marquer que ce n'est plus la première requête
-      isFirstUsersMeRequest = false
-      console.log('🔄 isFirstUsersMeRequest set to false')
-    } else {
-      console.log('⚠️ Not storing in first_auth_me because:', {
-        isUsersMeRequest,
-        isFirstUsersMeRequest,
-        isFirstRequest,
-        bothTrue: isUsersMeRequest && isFirstRequest
-      })
-    }
       
       // Stocker le dernier token reçu pour les requêtes suivantes
       lastReceivedToken = tokenValue
@@ -360,37 +374,26 @@ apiClient.interceptors.response.use(
         
         // Forcer la persistance du token dans localStorage
         forceTokenPersistence(tokenValue)
+        
+        // Afficher un toast de renouvellement de session
+        showTokenRefreshToast()
+      }
+      
+      // Si c'est la première requête /api/users/me, marquer que ce n'est plus la première
+      if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
+        console.log('🎯 First /api/users/me request completed - marking as not first anymore')
+        isFirstUsersMeRequest = false
+        console.log('🔄 isFirstUsersMeRequest set to false')
       }
     } else {
-      console.log('⚠️ No new token in response headers for:', response.config.url)
+      console.log('⚠️ No new token in response for:', response.config.url)
       
       // Si c'est la première requête /api/users/me et qu'il n'y a pas de nouveau token,
-      // stocker quand même le token de la requête dans first_auth_me
+      // marquer quand même que ce n'est plus la première requête
       if (isUsersMeRequest && isFirstUsersMeRequestOfSession()) {
-        console.log('🎯 First /api/users/me request - storing request token in first_auth_me (no response token)')
-        
-        // Stocker le token de la requête (celui qu'on a envoyé)
-        const authHeader = response.config.headers?.Authorization || response.config.headers?.authorization
-        const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null
-        
-        if (requestToken) {
-          localStorage.setItem('first_auth_me', requestToken)
-          console.log('💾 Request token stored in localStorage with key "first_auth_me"')
-          
-          // Vérifier que le token a bien été stocké
-          const storedToken = localStorage.getItem('first_auth_me')
-          console.log('🔍 Verification - first_auth_me in localStorage:', {
-            hasToken: !!storedToken,
-            tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'none',
-            matchesStored: storedToken === requestToken
-          })
-          
-          // Marquer que ce n'est plus la première requête
-          isFirstUsersMeRequest = false
-          console.log('🔄 isFirstUsersMeRequest set to false (no response token)')
-        } else {
-          console.log('❌ No request token found in headers')
-        }
+        console.log('🎯 First /api/users/me request completed (no new token) - marking as not first anymore')
+        isFirstUsersMeRequest = false
+        console.log('🔄 isFirstUsersMeRequest set to false (no new token)')
       }
     }
     
@@ -407,10 +410,30 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('🔑 Unauthorized - Token expired or invalid')
       
-      // Vérifier si un nouveau token est présent dans les headers de la réponse d'erreur
-      const newToken = error.response.headers['authorization'] || error.response.headers['Authorization']
+      // NOUVELLE LOGIQUE: Vérifier si un nouveau token est présent dans le body de la réponse d'erreur
+      let newToken = null
+      
+      if (error.response.data && typeof error.response.data === 'object') {
+        const responseData = error.response.data as any
+        // Vérifier response.data.newToken en premier
+        if (responseData.newToken && typeof responseData.newToken === 'string') {
+          newToken = responseData.newToken
+        } else if (responseData.data && responseData.data.newToken && typeof responseData.data.newToken === 'string') {
+          newToken = responseData.data.newToken
+        } else if (responseData.token && typeof responseData.token === 'string') {
+          newToken = responseData.token
+        } else if (responseData.data && responseData.data.token && typeof responseData.data.token === 'string') {
+          newToken = responseData.data.token
+        }
+      }
+      
+      // Fallback vers les headers si pas trouvé dans le body
+      if (!newToken) {
+        newToken = error.response.headers['authorization'] || error.response.headers['Authorization']
+      }
+      
       if (newToken) {
-        console.log('🔄 New token received in 401 response headers:', newToken.substring(0, 20) + '...')
+        console.log('🔄 New token received in 401 response:', newToken.substring(0, 20) + '...')
         
         // Extraire le token (enlever "Bearer " si présent)
         const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
@@ -427,7 +450,20 @@ apiClient.interceptors.response.use(
           
           // Forcer la persistance du token dans localStorage
           forceTokenPersistence(tokenValue)
+          
+          // Afficher un toast de renouvellement de session
+          showTokenRefreshToast()
         }
+      } else {
+        // Aucun nouveau token reçu - session expirée
+        showSessionExpiredToast()
+        
+        // Rediriger automatiquement vers la page de login après un délai
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login'
+          }
+        }, 3000) // 3 secondes de délai
       }
       
       // Si c'est une requête /api/users/me et qu'on n'a pas reçu de nouveau token,
@@ -442,7 +478,11 @@ apiClient.interceptors.response.use(
         }
         return
       }
+    } else if (error.response?.status === 403) {
+      // Erreur d'autorisation
+      showAuthErrorToast('Vous n\'avez pas les permissions nécessaires pour cette action.')
     }
+    
     return Promise.reject(error)
   }
 )
@@ -529,7 +569,28 @@ export function createOTPApiClient(): AxiosInstance {
   // Intercepteur pour gérer la rotation des tokens pour OTP
   otpClient.interceptors.response.use(
     (response: AxiosResponse) => {
-      const newToken = response.headers['authorization'] || response.headers['Authorization']
+      // NOUVELLE LOGIQUE: Chercher le token dans le body de la réponse
+      let newToken = null
+      
+      if (response.data && typeof response.data === 'object') {
+        const responseData = response.data as any
+        // Vérifier response.data.newToken en premier
+        if (responseData.newToken && typeof responseData.newToken === 'string') {
+          newToken = responseData.newToken
+        } else if (responseData.data && responseData.data.newToken && typeof responseData.data.newToken === 'string') {
+          newToken = responseData.data.newToken
+        } else if (responseData.token && typeof responseData.token === 'string') {
+          newToken = responseData.token
+        } else if (responseData.data && responseData.data.token && typeof responseData.data.token === 'string') {
+          newToken = responseData.data.token
+        }
+      }
+      
+      // Fallback vers les headers si pas trouvé dans le body
+      if (!newToken) {
+        newToken = response.headers['authorization'] || response.headers['Authorization']
+      }
+      
       if (newToken) {
         console.log('🔄 New OTP token received:', newToken.substring(0, 20) + '...')
         const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
@@ -576,7 +637,28 @@ export function createResetApiClient(): AxiosInstance {
   // Intercepteur pour gérer la rotation des tokens pour Reset
   resetClient.interceptors.response.use(
     (response: AxiosResponse) => {
-      const newToken = response.headers['authorization'] || response.headers['Authorization']
+      // NOUVELLE LOGIQUE: Chercher le token dans le body de la réponse
+      let newToken = null
+      
+      if (response.data && typeof response.data === 'object') {
+        const responseData = response.data as any
+        // Vérifier response.data.newToken en premier
+        if (responseData.newToken && typeof responseData.newToken === 'string') {
+          newToken = responseData.newToken
+        } else if (responseData.data && responseData.data.newToken && typeof responseData.data.newToken === 'string') {
+          newToken = responseData.data.newToken
+        } else if (responseData.token && typeof responseData.token === 'string') {
+          newToken = responseData.token
+        } else if (responseData.data && responseData.data.token && typeof responseData.data.token === 'string') {
+          newToken = responseData.data.token
+        }
+      }
+      
+      // Fallback vers les headers si pas trouvé dans le body
+      if (!newToken) {
+        newToken = response.headers['authorization'] || response.headers['Authorization']
+      }
+      
       if (newToken) {
         console.log('🔄 New reset token received:', newToken.substring(0, 20) + '...')
         const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken

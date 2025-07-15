@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist, subscribeWithSelector } from 'zustand/middleware'
-import { AuthSession, User } from '../types/auth'
-import { clearLastReceivedToken, compareTokens, resetFirstUsersMeRequest } from '../utils/api'
+import { resetSessionToastFlags, showLogoutToast } from '../services/sessionToast'
+import { AuthSession, Permissions, Role, User } from '../types/auth'
+import { clearAllTemporaryTokens, compareTokens, resetFirstUsersMeRequest } from '../utils/api'
 
 interface AuthState {
   // State
@@ -11,12 +12,16 @@ interface AuthState {
   isLoading: boolean
   error: string | null
   isFirstLogin: boolean
+  role: Role | null
+  permissions: Permissions | null
   
   // Actions
   login: (session: AuthSession) => void
   logout: () => void
   setUser: (user: User) => void
   setToken: (token: string) => void
+  setRole: (role: Role) => void
+  setPermissions: (permissions: Permissions) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   setFirstLogin: (isFirstLogin: boolean) => void
@@ -25,6 +30,14 @@ interface AuthState {
   
   // Computed
   hasRole: (role: string) => boolean
+  hasPermission: (permissionPath: string) => boolean
+  canAccessMenu: (menuKey: string) => boolean
+  canPerformAction: (menuKey: string, subMenuKey: string, action: string) => boolean
+  isAdmin: () => boolean
+  canManageRoles: () => boolean
+  canManageUsers: () => boolean
+  hasAnyPermission: (permissionPaths: string[]) => boolean
+  hasAllPermissions: (permissionPaths: string[]) => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -38,6 +51,8 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
         isFirstLogin: false,
+        role: null,
+        permissions: null,
 
         // Actions
         login: (session) => {
@@ -51,8 +66,9 @@ export const useAuthStore = create<AuthState>()(
           
           // Réinitialiser les variables de rotation pour une nouvelle session
           console.log('🔄 Resetting rotation variables for new session')
-          clearLastReceivedToken()
+          clearAllTemporaryTokens()
           resetFirstUsersMeRequest()
+          resetSessionToastFlags() // Réinitialiser les flags de toast
           
           // Note: first_auth_me sera stocké lors du premier appel /api/users/me
           // Ne pas le supprimer ici car il sera utilisé pour la rotation des tokens
@@ -100,7 +116,7 @@ export const useAuthStore = create<AuthState>()(
           })
           
           // Nettoyer le token temporaire et réinitialiser l'état
-          clearLastReceivedToken()
+          clearAllTemporaryTokens()
           resetFirstUsersMeRequest()
           compareTokens(null) // Reset token comparison state
           
@@ -109,6 +125,8 @@ export const useAuthStore = create<AuthState>()(
             localStorage.removeItem('first_auth_me')
             console.log('🧹 Cleared first_auth_me on logout')
           }
+          
+          showLogoutToast()
         },
 
         setUser: (user) => set({ user }),
@@ -172,10 +190,104 @@ export const useAuthStore = create<AuthState>()(
 
         clearError: () => set({ error: null }),
 
+        setRole: (role) => set({ role }),
+
+        setPermissions: (permissions) => set({ permissions }),
+
         // Computed
         hasRole: (role) => {
           const { user } = get()
-          return user?.role === role
+          return user?.Role?.name === role
+        },
+
+        hasPermission: (permissionPath) => {
+          const { permissions } = get()
+          if (!permissions) return false
+          
+          // Gestion des permissions spéciales
+          if (permissionPath === 'isAdmin') return permissions.isAdmin || false
+          if (permissionPath === 'canManageRoles') return permissions.canManageRoles || false
+          if (permissionPath === 'canManageUsers') return permissions.canManageUsers || false
+          
+          // Parser le chemin de permission
+          const parts = permissionPath.split('.')
+          
+          if (parts.length === 1) {
+            const menu = permissions[parts[0] as keyof typeof permissions]
+            if (menu && typeof menu === 'object' && 'permissions' in menu) {
+              return menu.permissions?.includes('view') || false
+            }
+            return false
+          }
+          
+          if (parts.length === 2) {
+            const [menuKey, action] = parts
+            const menu = permissions[menuKey as keyof typeof permissions]
+            if (menu && typeof menu === 'object' && 'permissions' in menu) {
+              return menu.permissions?.includes(action) || false
+            }
+            return false
+          }
+          
+          if (parts.length === 3) {
+            const [menuKey, subMenuKey, action] = parts
+            const menu = permissions[menuKey as keyof typeof permissions]
+            if (menu && typeof menu === 'object' && 'subMenus' in menu) {
+              const subMenu = menu.subMenus?.[subMenuKey]
+              return subMenu?.permissions?.includes(action) || false
+            }
+            return false
+          }
+          
+          return false
+        },
+
+        canAccessMenu: (menuKey) => {
+          const { permissions } = get()
+          if (!permissions) return false
+          
+          const menu = permissions[menuKey as keyof typeof permissions]
+          if (menu && typeof menu === 'object' && 'permissions' in menu) {
+            return menu.permissions?.includes('view') || false
+          }
+          return false
+        },
+
+        canPerformAction: (menuKey, subMenuKey, action) => {
+          const { permissions } = get()
+          if (!permissions) return false
+          
+          const menu = permissions[menuKey as keyof typeof permissions]
+          if (menu && typeof menu === 'object' && 'subMenus' in menu) {
+            const subMenu = menu.subMenus?.[subMenuKey]
+            return subMenu?.permissions?.includes(action) || false
+          }
+          return false
+        },
+
+        isAdmin: () => {
+          const { permissions } = get()
+          return permissions?.isAdmin || false
+        },
+
+        canManageRoles: () => {
+          const { permissions } = get()
+          return permissions?.canManageRoles || false
+        },
+
+        canManageUsers: () => {
+          const { permissions } = get()
+          return permissions?.canManageUsers || false
+        },
+
+        hasAnyPermission: (permissionPaths) => {
+          const { hasPermission } = get()
+          return permissionPaths.some(path => hasPermission(path))
+        },
+
+        hasAllPermissions: (permissionPaths) => {
+          const { hasPermission } = get()
+          return permissionPaths.every(path => hasPermission(path))
         }
       }),
       {

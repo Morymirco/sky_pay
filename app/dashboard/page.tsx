@@ -124,16 +124,40 @@ export default function Dashboard() {
         {/* Company Info */}
         <Card className="border-blue-500/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="w-5 h-5 text-blue-500" />
-              {apiData?.company?.name || "SKY PAY ENTERPRISE"}
-            </CardTitle>
-            <CardDescription>
-              Plateforme de paiement sécurisée pour la gestion des bénéficiaires
-            </CardDescription>
+            <div className="flex items-center gap-4">
+              {/* Logo de l'entreprise */}
+              {apiData?.company?.logo ? (
+                <div className="flex-shrink-0">
+                  <img 
+                    src={apiData.company.logo} 
+                    alt={`Logo ${apiData.company.name}`}
+                    className="w-16 h-16 object-contain rounded-lg border border-border bg-white p-2"
+                    onError={(e) => {
+                      // Fallback si l'image ne charge pas
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-blue-500/10 rounded-lg border border-blue-500/20 flex items-center justify-center">
+                  <Building className="w-8 h-8 text-blue-500" />
+                </div>
+              )}
+              
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="w-5 h-5 text-blue-500" />
+                  {apiData?.company?.name || "SKY PAY ENTERPRISE"}
+                </CardTitle>
+                <CardDescription>
+                  Plateforme de paiement sécurisée pour la gestion des bénéficiaires
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Adresse:</p>
                 <p>{apiData?.company?.address || "123 Avenue des Technologies, Dakar, Sénégal"}</p>
@@ -145,10 +169,6 @@ export default function Dashboard() {
               <div>
                 <p className="text-muted-foreground">Email:</p>
                 <p>{apiData?.company?.email || "contact@skypay.sn"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Site Web:</p>
-                <p>www.skypay.sn</p>
               </div>
             </div>
           </CardContent>

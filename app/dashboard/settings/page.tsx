@@ -1,16 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { Settings, Save, ArrowLeft, Bell, Shield, Globe, Palette, Database, Key, User, Lock, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, Bell, Database, Key, Palette, Save, Shield, User } from "lucide-react"
+import { useState } from "react"
 
 export default function SettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -140,7 +137,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             Notifications
@@ -160,6 +157,10 @@ export default function SettingsPage() {
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Key className="w-4 h-4" />
             API
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="flex items-center gap-2">
+            <User className="w-4 h-4" />
+            Rôles
           </TabsTrigger>
         </TabsList>
 
@@ -502,6 +503,46 @@ export default function SettingsPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Rôles */}
+        <TabsContent value="roles" className="space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-foreground tracking-wider flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  GESTION DES RÔLES
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = '/dashboard/settings/roles'}
+                    className="flex items-center gap-2"
+                  >
+                    <User className="w-4 h-4" />
+                    Gérer les rôles
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center py-8">
+                <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Gestion des rôles</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Créez et gérez les rôles utilisateurs avec leurs permissions spécifiques.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/dashboard/settings/roles'}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Accéder à la gestion des rôles
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -19,6 +19,7 @@ export const API_CONFIG = {
     },
     USERS: '/api/users',
     MEMBERS: '/api/members',
+    ROLES: '/api/roles',
     RECHARGE_REQUESTS: '/api/recharge-requests',
     DOCS: '/api/docs',
   },
@@ -60,6 +61,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://corporat
 export const API_ROUTES = {
   members: `${API_BASE_URL}/api/members`,
   users: `${API_BASE_URL}/api/users`,
+  roles: `${API_BASE_URL}/api/roles`,
   rechargeRequests: `${API_BASE_URL}/api/recharge-requests`,
   docs: `${API_BASE_URL}/api/docs`,
   // Ajoute ici d'autres routes (paiements, comptes, etc.)

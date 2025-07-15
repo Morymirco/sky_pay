@@ -1,15 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import { UserPlus, Save, ArrowLeft, Shield, CheckSquare, Users, CreditCard, BarChart3, Settings, Home, RefreshCw, User } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import { useCreateRole, useRole, useUpdateRole } from "@/lib/hooks/useRoles"
+import { ArrowLeft, BarChart3, CreditCard, Home, RefreshCw, Save, Settings, Shield, User, UserPlus, Users } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 interface MenuItem {
   id: string
@@ -19,20 +21,20 @@ interface MenuItem {
   category: string
 }
 
-interface Role {
-  id: string
-  name: string
-  description: string
-  permissions: string[]
-  createdAt: string
-  createdBy: string
-}
-
 export default function CreateRolePage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const roleId = searchParams.get('id')
+  const isEditing = !!roleId
+  
   const [roleName, setRoleName] = useState("")
   const [roleDescription, setRoleDescription] = useState("")
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Hooks React Query
+  const createRoleMutation = useCreateRole()
+  const updateRoleMutation = useUpdateRole()
+  const { data: existingRole, isLoading: isLoadingRole } = useRole(roleId ? parseInt(roleId) : 0)
 
   // Liste des menus disponibles
   const availableMenus: MenuItem[] = [
@@ -72,6 +74,99 @@ export default function CreateRolePage() {
     return acc
   }, {} as Record<string, MenuItem[]>)
 
+  // Fonction pour mapper les permissions de l'API vers les IDs de l'interface
+  const mapApiPermissionsToInterface = (permissions: any) => {
+    const selectedIds: string[] = []
+    
+    console.log('🔍 Mapping des permissions API vers interface:', permissions)
+    
+    if (!permissions) {
+      console.warn('⚠️ Aucune permission trouvée dans la réponse')
+      return selectedIds
+    }
+    
+    // Accueil
+    if (permissions.accueil?.permissions?.includes("view")) {
+      selectedIds.push("dashboard")
+      console.log('✅ Permission accueil.view → dashboard')
+    }
+    
+    // Rapports
+    if (permissions.rapports?.permissions?.includes("view")) {
+      selectedIds.push("reports")
+      console.log('✅ Permission rapports.view → reports')
+    }
+    
+    // Paramètres
+    if (permissions.parametres?.permissions?.includes("view")) {
+      selectedIds.push("settings")
+      console.log('✅ Permission parametres.view → settings')
+    }
+    
+    // Gestion de compte
+    if (permissions.gestion_compte?.permissions?.includes("view")) {
+      selectedIds.push("account")
+      console.log('✅ Permission gestion_compte.view → account')
+    }
+    
+    // Demandes de rechargement
+    if (permissions.demande_rechargement?.permissions?.includes("view")) {
+      selectedIds.push("recharge-requests")
+      console.log('✅ Permission demande_rechargement.view → recharge-requests')
+    }
+    
+    // Gestion des bénéficiaires
+    if (permissions.gestion_beneficiaires?.permissions?.includes("view")) {
+      selectedIds.push("members")
+      console.log('✅ Permission gestion_beneficiaires.view → members')
+    }
+    if (permissions.gestion_beneficiaires?.permissions?.includes("import")) {
+      selectedIds.push("members-import")
+      console.log('✅ Permission gestion_beneficiaires.import → members-import')
+    }
+    
+    // Paiement des bénéficiaires
+    if (permissions.paiement_beneficiaires?.permissions?.includes("view")) {
+      selectedIds.push("payments")
+      console.log('✅ Permission paiement_beneficiaires.view → payments')
+    }
+    if (permissions.paiement_beneficiaires?.permissions?.includes("initiate")) {
+      selectedIds.push("payments-initiate")
+      console.log('✅ Permission paiement_beneficiaires.initiate → payments-initiate')
+    }
+    if (permissions.paiement_beneficiaires?.permissions?.includes("verify")) {
+      selectedIds.push("payments-verify")
+      console.log('✅ Permission paiement_beneficiaires.verify → payments-verify')
+    }
+    if (permissions.paiement_beneficiaires?.permissions?.includes("validate")) {
+      selectedIds.push("payments-validate")
+      console.log('✅ Permission paiement_beneficiaires.validate → payments-validate')
+    }
+    
+    // Administration
+    if (permissions.isAdmin || permissions.canManageRoles) {
+      selectedIds.push("settings-create-role")
+      console.log('✅ Permission admin/roles → settings-create-role')
+    }
+    
+    console.log('🔍 Permissions mappées finales:', selectedIds)
+    return selectedIds
+  }
+
+  // Charger les données du rôle existant
+  useEffect(() => {
+    if (existingRole && isEditing) {
+      console.log('🔍 Chargement du rôle existant:', existingRole)
+      console.log('🔍 Permissions du rôle:', existingRole.permissions)
+      
+      setRoleName(existingRole.name)
+      setRoleDescription(existingRole.description)
+      const mappedPermissions = mapApiPermissionsToInterface(existingRole.permissions)
+      console.log('🔍 Permissions mappées vers l\'interface:', mappedPermissions)
+      setSelectedPermissions(mappedPermissions)
+    }
+  }, [existingRole, isEditing])
+
   const handlePermissionToggle = (permissionId: string) => {
     setSelectedPermissions(prev => 
       prev.includes(permissionId)
@@ -105,44 +200,122 @@ export default function CreateRolePage() {
   }
 
   const handleSubmit = async () => {
-    if (!roleName.trim() || !roleDescription.trim() || selectedPermissions.length === 0) {
+    const trimmedRoleName = (roleName || '').trim()
+    const trimmedRoleDescription = (roleDescription || '').trim()
+    
+    if (!trimmedRoleName || !trimmedRoleDescription || selectedPermissions.length === 0) {
       alert("Veuillez remplir tous les champs obligatoires et sélectionner au moins une permission.")
       return
     }
 
-    setIsSubmitting(true)
-    
     try {
-      // Simulation d'un appel API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const newRole: Role = {
-        id: `role_${Date.now()}`,
-        name: roleName,
-        description: roleDescription,
-        permissions: selectedPermissions,
-        createdAt: new Date().toISOString(),
-        createdBy: "Admin"
+      // Mapper les permissions sélectionnées vers la structure attendue par l'API
+      const permissions = {
+        accueil: { 
+          name: "Accueil", 
+          permissions: selectedPermissions.includes("dashboard") ? ["view"] : [], 
+          subMenus: {} 
+        },
+        rapports: { 
+          name: "Rapports", 
+          permissions: selectedPermissions.includes("reports") ? ["view"] : [], 
+          subMenus: {} 
+        },
+        parametres: { 
+          name: "Paramètres", 
+          permissions: selectedPermissions.includes("settings") ? ["view"] : [], 
+          subMenus: {} 
+        },
+        gestion_compte: { 
+          name: "Gestion de compte", 
+          permissions: selectedPermissions.includes("account") ? ["view"] : [], 
+          subMenus: {} 
+        },
+        demande_rechargement: { 
+          name: "Demandes de rechargement", 
+          permissions: selectedPermissions.includes("recharge-requests") ? ["view"] : [], 
+          subMenus: {} 
+        },
+        gestion_beneficiaires: { 
+          name: "Gestion des bénéficiaires", 
+          permissions: [
+            ...(selectedPermissions.includes("members") ? ["view"] : []),
+            ...(selectedPermissions.includes("members-import") ? ["import"] : [])
+          ], 
+          subMenus: {} 
+        },
+        paiement_beneficiaires: { 
+          name: "Paiement des bénéficiaires", 
+          permissions: [
+            ...(selectedPermissions.includes("payments") ? ["view"] : []),
+            ...(selectedPermissions.includes("payments-initiate") ? ["initiate"] : []),
+            ...(selectedPermissions.includes("payments-verify") ? ["verify"] : []),
+            ...(selectedPermissions.includes("payments-validate") ? ["validate"] : [])
+          ], 
+          subMenus: {} 
+        },
+        isAdmin: selectedPermissions.includes("settings-create-role"),
+        canManageRoles: selectedPermissions.includes("settings-create-role"),
+        canManageUsers: selectedPermissions.includes("members") || selectedPermissions.includes("members-import")
+      }
+
+      console.log('🔍 Permissions sélectionnées:', selectedPermissions)
+      console.log('🔍 Structure des permissions à envoyer:', permissions)
+
+      if (isEditing && roleId) {
+        // Mise à jour du rôle existant
+        await updateRoleMutation.mutateAsync({
+          id: parseInt(roleId),
+          data: {
+            name: trimmedRoleName,
+            description: trimmedRoleDescription,
+            permissions: permissions
+          }
+        })
+        alert("Rôle mis à jour avec succès !")
+      } else {
+        // Création d'un nouveau rôle
+        await createRoleMutation.mutateAsync({
+          name: trimmedRoleName,
+          description: trimmedRoleDescription,
+          permissions: permissions
+        })
+        alert("Rôle créé avec succès !")
       }
       
-      console.log("Nouveau rôle créé:", newRole)
-      
-      // Réinitialiser le formulaire
-      setRoleName("")
-      setRoleDescription("")
-      setSelectedPermissions([])
-      
-      alert("Rôle créé avec succès !")
+      // Rediriger vers la liste des rôles
+      router.push('/dashboard/settings/roles')
     } catch (error) {
-      console.error("Erreur lors de la création du rôle:", error)
-      alert("Erreur lors de la création du rôle. Veuillez réessayer.")
-    } finally {
-      setIsSubmitting(false)
+      console.error("Erreur lors de la création/mise à jour du rôle:", error)
+      alert("Erreur lors de la création/mise à jour du rôle. Veuillez réessayer.")
     }
   }
 
   const handleBack = () => {
     window.history.back()
+  }
+
+  if (isEditing && isLoadingRole) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement du rôle...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Empêcher le rendu du formulaire si on est en mode édition et que les données ne sont pas encore chargées
+  if (isEditing && !existingRole) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Préparation du formulaire...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -155,25 +328,34 @@ export default function CreateRolePage() {
             Retour
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-wider">CRÉER UN RÔLE</h1>
-            <p className="text-sm text-muted-foreground">Définir un nouveau rôle avec ses permissions</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-wider">
+              {isEditing ? "MODIFIER LE RÔLE" : "CRÉER UN RÔLE"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {isEditing ? "Modifier le rôle et ses permissions" : "Définir un nouveau rôle avec ses permissions"}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button 
             onClick={handleSubmit}
-            disabled={isSubmitting || !roleName.trim() || !roleDescription.trim() || selectedPermissions.length === 0}
+            disabled={
+              (isEditing ? updateRoleMutation.isPending : createRoleMutation.isPending) || 
+              !(roleName || '').trim() || 
+              !(roleDescription || '').trim() || 
+              selectedPermissions.length === 0
+            }
             className="bg-blue-600 hover:bg-blue-700"
           >
-            {isSubmitting ? (
+            {(isEditing ? updateRoleMutation.isPending : createRoleMutation.isPending) ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                CRÉATION...
+                {isEditing ? "MISE À JOUR..." : "CRÉATION..."}
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Save className="w-4 h-4" />
-                CRÉER LE RÔLE
+                {isEditing ? "METTRE À JOUR" : "CRÉER LE RÔLE"}
               </div>
             )}
           </Button>

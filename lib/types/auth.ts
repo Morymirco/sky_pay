@@ -4,17 +4,52 @@ export interface User {
   last_name: string
   email: string
   username?: string
-  role: 'user' | 'admin' | 'super_admin' | 'add' | 'delete_and_add_edit' | 'init_paiement' | 'confirm_paiement' | 'verify_paiement'
-  phone?: string
-  is_active: boolean
+  roleId: number
   companyId: number
+  is_active: boolean
+  is_first_login: boolean
+  Role?: Role
   company?: {
     id: number
     name: string
   }
-  is_first_login?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Role {
+  id: number
+  name: string
+  description?: string
+  permissions: Permissions
+  is_active: boolean
+  is_default: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface Permissions {
+  accueil?: PermissionItem
+  rapports?: PermissionItem
+  parametres?: PermissionItem
+  gestion_compte?: PermissionItem
+  demande_rechargement?: PermissionItem
+  gestion_beneficiaires?: PermissionItem
+  paiement_beneficiaires?: PermissionItem
+  isAdmin?: boolean
+  canManageRoles?: boolean
+  canManageUsers?: boolean
+}
+
+export interface PermissionItem {
+  name: string
+  permissions: string[]
+  subMenus?: Record<string, SubMenuPermission>
+}
+
+export interface SubMenuPermission {
+  name: string
+  permissions: string[]
 }
 
 export interface AuthSession {
@@ -40,6 +75,7 @@ export interface LoginResponse {
 }
 
 export interface OTPVerificationRequest {
+  email: string
   otp: string
 }
 
@@ -54,15 +90,10 @@ export interface OTPVerificationResponse {
   }
 }
 
-export interface ChangePasswordRequest {
-  current_password: string
-  new_password: string
-}
-
-export interface AuthResponse {
-  success: boolean
-  message: string
-  data?: any
+export interface PasswordChangeRequest {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
 }
 
 export interface RefreshTokenResponse {
@@ -71,12 +102,32 @@ export interface RefreshTokenResponse {
   expiresIn: number
 }
 
-export interface PasswordChangeRequest {
+export interface ApiResponse {
+  success: boolean
+  message: string
+  user: User
+  company: CompanyData
+  role: Role
+  newToken?: string
+}
+
+export interface CompanyData {
+  id: number
+  name: string
+  address: string
+  phone: string
+  email: string
+  logo: string
+  is_active: boolean
+  solde: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ChangePasswordRequest {
   current_password: string
   new_password: string
 }
-
-
 
 export interface RequestPasswordResetOTPRequest {
   email: string

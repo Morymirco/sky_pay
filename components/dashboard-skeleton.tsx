@@ -7,12 +7,21 @@ export function DashboardSkeleton() {
       {/* Company Info Skeleton */}
       <Card className="border-blue-500/20">
         <CardHeader>
-          <Skeleton className="h-6 w-48 mb-2" />
-          <Skeleton className="h-4 w-96" />
+          <div className="flex items-center gap-4">
+            {/* Logo skeleton */}
+            <div className="flex-shrink-0">
+              <Skeleton className="w-16 h-16 rounded-lg" />
+            </div>
+            
+            <div className="flex-1">
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-4 w-48" />

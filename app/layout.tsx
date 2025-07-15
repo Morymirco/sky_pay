@@ -1,8 +1,9 @@
+import { AuthProvider } from '@/components/auth/AuthProvider'
+import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/toaster'
+import { QueryProvider } from '@/lib/providers/query-provider'
 import type { Metadata } from 'next'
 import './globals.css'
-import { ThemeProvider } from '@/components/theme-provider'
-import { QueryProvider } from '@/lib/providers/query-provider'
-import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'Sky Pay - Transfert d\'argent',
@@ -27,6 +28,7 @@ export default function RootLayout({
           >
             <AuthProvider>
               {children}
+              <Toaster />
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>
