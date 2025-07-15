@@ -1,12 +1,12 @@
 import {
-    LoginCredentials,
-    LoginResponse,
-    OTPVerificationRequest,
-    OTPVerificationResponse,
-    PasswordChangeRequest,
-    RefreshTokenResponse,
-    Role,
-    User
+  LoginCredentials,
+  LoginResponse,
+  OTPVerificationRequest,
+  OTPVerificationResponse,
+  PasswordChangeRequest,
+  RefreshTokenResponse,
+  Role,
+  User
 } from '../types/auth'
 import { apiClient, createOTPApiClient, createResetApiClient } from '../utils/api'
 
@@ -137,6 +137,37 @@ export const authService = {
       newPassword
     })
     console.log('🔑 Password reset response:', data)
+    return data
+  },
+
+  // Get company users
+  async getCompanyUsers(): Promise<{
+    success: boolean
+    message: string
+    data: Array<{
+      id: number
+      username: string
+      email: string
+      first_name: string
+      last_name: string
+      roleId: number
+      is_active: boolean
+      is_first_login: boolean
+      secret_otp: string
+      companyId: number
+      createdAt: string
+      updatedAt: string
+      Role: {
+        id: number
+        name: string
+        description: string
+        permissions: any
+      }
+    }>
+    newToken?: string
+  }> {
+    const { data } = await apiClient.get('/api/users/company-users')
+    console.log('👥 Company users response:', data)
     return data
   }
 } 
