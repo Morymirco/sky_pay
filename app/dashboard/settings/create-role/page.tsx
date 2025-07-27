@@ -258,7 +258,7 @@ export default function CreateRolePage() {
         canManageRoles: selectedPermissions.includes("settings-create-role"),
         canManageUsers: selectedPermissions.includes("members") || selectedPermissions.includes("members-import")
       }
-
+      
       console.log('🔍 Permissions sélectionnées:', selectedPermissions)
       console.log('🔍 Structure des permissions à envoyer:', permissions)
 
@@ -280,7 +280,7 @@ export default function CreateRolePage() {
           description: trimmedRoleDescription,
           permissions: permissions
         })
-        alert("Rôle créé avec succès !")
+      alert("Rôle créé avec succès !")
       }
       
       // Rediriger vers la liste des rôles

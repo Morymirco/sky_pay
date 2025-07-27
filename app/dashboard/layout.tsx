@@ -303,184 +303,184 @@ export default function DashboardLayout({
 
             {/* Accueil */}
             {(canViewHome() || isLoadingUserData || isLoadingPermissions) && (
-              <button
-                onClick={() => router.push("/dashboard")}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                  pathname === "/dashboard"
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <Home className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-xs font-medium">ACCUEIL</span>}
-              </button>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <Home className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">ACCUEIL</span>}
+            </button>
             )}
 
             {/* Gestion des bénéficiaires - Sous-menu */}
             {hasVisibleMembersItems && (
-              <div className="space-y-1">
-                <button
-                  onClick={() => setMembersSubmenu(!membersSubmenu)}
-                  className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                    pathname.startsWith("/dashboard/members")
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                    {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DES BÉNÉFICIAIRES</span>}
-                  </div>
-                  {!sidebarCollapsed && (
-                    <ChevronDown className={`w-4 h-4 transition-transform ${membersSubmenu ? "rotate-180" : ""}`} />
-                  )}
-                </button>
-                
-                <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
-                  membersSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
-                }`}>
+            <div className="space-y-1">
+              <button
+                onClick={() => setMembersSubmenu(!membersSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  pathname.startsWith("/dashboard/members")
+                    ? "bg-blue-500 text-white shadow-lg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DES BÉNÉFICIAIRES</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform ${membersSubmenu ? "rotate-180" : ""}`} />
+                )}
+              </button>
+              
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                membersSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
                     {filteredMembersSubItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => router.push(item.href)}
-                        className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
-                          pathname === item.href
-                            ? "bg-blue-500/20 text-blue-500"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-              </div>
+                    <button
+                      key={item.id}
+                      onClick={() => router.push(item.href)}
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
+                        pathname === item.href
+                          ? "bg-blue-500/20 text-blue-500"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+            </div>
             )}
 
             {/* Payments Submenu placé ici */}
             {hasVisiblePaymentsItems && (
-              <div className="space-y-1">
-                <button
-                  onClick={() => setPaymentsSubmenu(!paymentsSubmenu)}
-                  className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                    pathname.startsWith("/dashboard/payments")
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                    {!sidebarCollapsed && <span className="text-xs font-medium">PAYER LES BÉNÉFICIAIRES</span>}
-                  </div>
-                  {!sidebarCollapsed && (
-                    <ChevronDown className={`w-4 h-4 transition-transform ${paymentsSubmenu ? "rotate-180" : ""}`} />
-                  )}
-                </button>
-                <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
-                  paymentsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
-                }`}>
+            <div className="space-y-1">
+              <button
+                onClick={() => setPaymentsSubmenu(!paymentsSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  pathname.startsWith("/dashboard/payments")
+                    ? "bg-blue-500 text-white shadow-lg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-xs font-medium">PAYER LES BÉNÉFICIAIRES</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform ${paymentsSubmenu ? "rotate-180" : ""}`} />
+                )}
+              </button>
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                paymentsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
                     {filteredPaymentsSubItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => router.push(item.href)}
-                        className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
-                          pathname === item.href
-                            ? "bg-blue-500/20 text-blue-500"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-              </div>
+                    <button
+                      key={item.id}
+                      onClick={() => router.push(item.href)}
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
+                        pathname === item.href
+                          ? "bg-blue-500/20 text-blue-500"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+            </div>
             )}
 
             {/* Rapports */}
             {canViewReports() && (
-              <button
-                onClick={() => router.push("/dashboard/reports")}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                  pathname === "/dashboard/reports"
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <BarChart3 className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-xs font-medium">RAPPORTS</span>}
-              </button>
+            <button
+              onClick={() => router.push("/dashboard/reports")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard/reports"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <BarChart3 className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">RAPPORTS</span>}
+            </button>
             )}
 
             {/* Demandes de Rechargement */}
             {canViewRechargeRequests() && (
-              <button
-                onClick={() => router.push("/dashboard/recharge-requests")}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                  pathname === "/dashboard/recharge-requests"
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <RefreshCw className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-xs font-medium">DEMANDES DE RECHARGEMENT</span>}
-              </button>
+            <button
+              onClick={() => router.push("/dashboard/recharge-requests")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard/recharge-requests"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <RefreshCw className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">DEMANDES DE RECHARGEMENT</span>}
+            </button>
             )}
 
             {/* Gestion de compte */}
             {canViewAccountManagement() && (
-              <button
-                onClick={() => router.push("/dashboard/account")}
-                className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                  pathname === "/dashboard/account"
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <User className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
-              </button>
+            <button
+              onClick={() => router.push("/dashboard/account")}
+              className={`w-full flex items-center gap-3 p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                pathname === "/dashboard/account"
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              <User className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+              {!sidebarCollapsed && <span className="text-xs font-medium">GESTION DE COMPTE</span>}
+            </button>
             )}
 
             {/* Paramètres - Sous-menu */}
             {hasVisibleSettingsItems && (
-              <div className="space-y-1">
-                <button
-                  onClick={() => setSettingsSubmenu(!settingsSubmenu)}
-                  className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-                    pathname.startsWith("/dashboard/settings")
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
-                    {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
-                  </div>
-                  {!sidebarCollapsed && (
-                    <ChevronDown className={`w-4 h-4 transition-transform ${settingsSubmenu ? "rotate-180" : ""}`} />
-                  )}
-                </button>
-                
-                <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
-                  settingsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
-                }`}>
+            <div className="space-y-1">
+              <button
+                onClick={() => setSettingsSubmenu(!settingsSubmenu)}
+                className={`w-full flex items-center justify-between p-3 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+                  pathname.startsWith("/dashboard/settings")
+                    ? "bg-blue-500 text-white shadow-lg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="w-5 h-5 md:w-5 md:h-5 sm:w-6 sm:h-6" />
+                  {!sidebarCollapsed && <span className="text-xs font-medium">PARAMÈTRES</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown className={`w-4 h-4 transition-transform ${settingsSubmenu ? "rotate-180" : ""}`} />
+                )}
+              </button>
+              
+              <div className={`ml-6 space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                settingsSubmenu && !sidebarCollapsed ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              }`}>
                     {filteredSettingsSubItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => router.push(item.href)}
-                        className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
-                          pathname === item.href
-                            ? "bg-blue-500/20 text-blue-500"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-              </div>
+                    <button
+                      key={item.id}
+                      onClick={() => router.push(item.href)}
+                      className={`w-full flex items-center gap-3 p-2 rounded transition-all duration-200 ease-in-out transform hover:scale-[1.02] text-xs ${
+                        pathname === item.href
+                          ? "bg-blue-500/20 text-blue-500"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+            </div>
             )}
           </nav>
 

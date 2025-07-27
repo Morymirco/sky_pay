@@ -4,6 +4,7 @@ import { DashboardSkeleton } from "@/components/dashboard-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth"
+// import { useDashboard } from "@/lib/hooks/useDashboard" // DÉSACTIVÉ TEMPORAIREMENT
 import { authService } from "@/lib/services/auth"
 import { useAuthStore } from "@/lib/stores/authStore"
 import { Building, CheckCircle, CheckSquare, FileText, Users, Wallet } from "lucide-react"
@@ -40,15 +41,55 @@ interface ApiResponse {
   company: CompanyData
 }
 
+// Données mockées pour le dashboard (DÉSACTIVÉ TEMPORAIREMENT)
+const mockDashboardData = {
+  beneficiaries: 1247,
+  bulkPayments: {
+    initiated: 15,
+    validated: 89,
+    total: 104
+  },
+  recentActivities: [
+    {
+      id: "1",
+      type: "payment" as const,
+      action: "Paiement validé",
+      description: "Paiement validé - ID: #PAY-2024-001",
+      timestamp: new Date().toISOString(),
+      paymentId: "PAY-2024-001",
+      amount: 150.00
+    },
+    {
+      id: "2",
+      type: "member" as const,
+      action: "Nouveau bénéficiaire",
+      description: "Nouveau bénéficiaire ajouté",
+      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 min ago
+      userId: 1,
+      userName: "Admin"
+    },
+    {
+      id: "3",
+      type: "payment" as const,
+      action: "Paiement initié",
+      description: "Paiement initié - 50 bénéficiaires",
+      timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1h ago
+      paymentId: "PAY-2024-002",
+      amount: 5000.00
+    }
+  ]
+}
+
 export default function Dashboard() {
   const { isAuthenticated, user, isLoading } = useRequireAuth()
   const [apiData, setApiData] = useState<ApiResponse | null>(null)
   const [isLoadingData, setIsLoadingData] = useState(false)
 
-  // Le hook useRequireAuth gère automatiquement la redirection si pas authentifié
-  // et affiche un loading pendant la vérification
-  
-  // Appel API pour récupérer les données utilisateur
+  // DÉSACTIVÉ TEMPORAIREMENT - Utiliser des données mockées
+  // const { data: dashboardData, isLoading: isDashboardLoading } = useDashboard()
+  const dashboardData = mockDashboardData
+  const isDashboardLoading = false
+
   useEffect(() => {
     let retryCount = 0
     const maxRetries = 2
@@ -58,7 +99,6 @@ export default function Dashboard() {
         setIsLoadingData(true)
         console.log('🔍 Fetching current user data... (attempt', retryCount + 1, ')')
         
-        // Debug: Vérifier l'état du token avant la requête
         const { token } = useAuthStore.getState()
         console.log('🔍 Token state before request:', {
           hasToken: !!token,
@@ -66,7 +106,6 @@ export default function Dashboard() {
           tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
         })
         
-        // Debug: Vérifier localStorage
         if (typeof window !== 'undefined') {
           const persistedState = JSON.parse(localStorage.getItem('auth-storage') || '{}')
           const persistedToken = persistedState.state?.token
@@ -79,85 +118,91 @@ export default function Dashboard() {
         
         const response = await authService.getCurrentUser()
         console.log('✅ Current user data:', response)
-        setApiData(response)
+        // DÉSACTIVÉ TEMPORAIREMENT - Adapter la réponse pour éviter les erreurs de type
+        const adaptedResponse: ApiResponse = {
+          success: response.success,
+          message: response.message,
+          user: {
+            id: response.user.id,
+            email: response.user.email,
+            role: response.role?.name || 'user', // Adapter le rôle
+            companyId: response.user.companyId,
+            is_active: response.user.is_active,
+            is_first_login: response.user.is_first_login,
+            first_name: response.user.first_name,
+            last_name: response.user.last_name
+          },
+          company: response.company
+        }
+        setApiData(adaptedResponse)
       } catch (error: any) {
         console.error('❌ Error fetching user data:', error)
         
-        // Si c'est une erreur 401 et qu'on n'a pas dépassé le nombre de tentatives
         if (error?.response?.status === 401 && retryCount < maxRetries) {
           retryCount++
           console.log('🔄 Retrying user data fetch... (attempt', retryCount + 1, ')')
           
-          // Attendre un peu plus longtemps avant de réessayer pour laisser le temps au token d'être mis à jour
           setTimeout(() => {
             fetchUserData()
           }, 1500 * retryCount)
           return
         }
         
-        // Si c'est une erreur 401 et qu'on a dépassé les tentatives
         if (error?.response?.status === 401) {
           console.log('⚠️ 401 error after retries - logout will be handled by API interceptor')
-          // La déconnexion sera gérée par l'intercepteur API si nécessaire
         }
       } finally {
         setIsLoadingData(false)
       }
     }
 
-    // Appeler l'API seulement si l'utilisateur est authentifié et pas en cours de chargement
     if (isAuthenticated && user && !isLoading) {
-      // Délai pour s'assurer que la rotation des tokens est terminée
       setTimeout(() => {
         fetchUserData()
       }, 500)
     }
   }, [isAuthenticated, user, isLoading])
   
-  // Afficher le skeleton pendant le chargement
-  if (isLoading || isLoadingData) {
+  if (isLoading || isLoadingData || isDashboardLoading) {
     return <DashboardSkeleton />
   }
 
   return (
     <div className="p-6 space-y-6">
-        {/* Company Info */}
         <Card className="border-blue-500/20">
           <CardHeader>
-            <div className="flex items-center gap-4">
-              {/* Logo de l'entreprise */}
-              {apiData?.company?.logo ? (
-                <div className="flex-shrink-0">
-                  <img 
-                    src={apiData.company.logo} 
-                    alt={`Logo ${apiData.company.name}`}
-                    className="w-16 h-16 object-contain rounded-lg border border-border bg-white p-2"
-                    onError={(e) => {
-                      // Fallback si l'image ne charge pas
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 bg-blue-500/10 rounded-lg border border-blue-500/20 flex items-center justify-center">
-                  <Building className="w-8 h-8 text-blue-500" />
-                </div>
-              )}
-              
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="w-5 h-5 text-blue-500" />
-                  {apiData?.company?.name || "SKY PAY ENTERPRISE"}
-                </CardTitle>
-                <CardDescription>
-                  Plateforme de paiement sécurisée pour la gestion des bénéficiaires
-                </CardDescription>
+          <div className="flex items-center gap-4">
+            {apiData?.company?.logo ? (
+              <div className="flex-shrink-0">
+                <img 
+                  src={apiData.company.logo} 
+                  alt={`Logo ${apiData.company.name}`}
+                  className="w-16 h-16 object-contain rounded-lg border border-border bg-white p-2"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
               </div>
+            ) : (
+              <div className="w-16 h-16 bg-blue-500/10 rounded-lg border border-blue-500/20 flex items-center justify-center">
+                <Building className="w-8 h-8 text-blue-500" />
+              </div>
+            )}
+            
+            <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <Building className="w-5 h-5 text-blue-500" />
+              {apiData?.company?.name || "SKY PAY ENTERPRISE"}
+            </CardTitle>
+            <CardDescription>
+              Plateforme de paiement sécurisée pour la gestion des bénéficiaires
+            </CardDescription>
             </div>
+          </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Adresse:</p>
                 <p>{apiData?.company?.address || "123 Avenue des Technologies, Dakar, Sénégal"}</p>
@@ -174,9 +219,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Statistics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Solde */}
           <Card className="border-green-500/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -186,13 +229,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
-                {apiData?.company?.solde ? `${apiData.company.solde.toLocaleString()} €` : "2,450,000 €"}
+              {apiData?.company.solde || 0} GNF
               </div>
               <p className="text-sm text-muted-foreground mt-1">Disponible</p>
             </CardContent>
           </Card>
 
-          {/* Nombre de bénéficiaires */}
           <Card className="border-blue-500/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -201,12 +243,13 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-500">1,247</div>
+            <div className="text-2xl font-bold text-blue-500">
+              {dashboardData?.beneficiaries || 0}
+            </div>
               <p className="text-sm text-muted-foreground mt-1">Actifs</p>
             </CardContent>
           </Card>
 
-          {/* Nombre de paiements initiés */}
           <Card className="border-orange-500/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -215,12 +258,13 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-500">156</div>
+            <div className="text-2xl font-bold text-orange-500">
+              {dashboardData?.bulkPayments.initiated || 0}
+            </div>
               <p className="text-sm text-muted-foreground mt-1">En attente</p>
             </CardContent>
           </Card>
 
-          {/* Nombre de paiements validés */}
           <Card className="border-purple-500/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -229,13 +273,14 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-500">89</div>
+            <div className="text-2xl font-bold text-purple-500">
+              {dashboardData?.bulkPayments.validated || 0}
+            </div>
               <p className="text-sm text-muted-foreground mt-1">Confirmés</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -245,27 +290,31 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted rounded">
+            {dashboardData?.recentActivities?.length > 0 ? (
+              dashboardData.recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 bg-muted rounded">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Paiement validé - ID: #PAY-2024-001</span>
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        activity.type === 'payment'
+                          ? activity.action.includes('validé')
+                            ? 'bg-green-500'
+                            : 'bg-orange-500'
+                          : activity.type === 'member'
+                          ? 'bg-blue-500'
+                          : 'bg-gray-500'
+                      }`}
+                    ></div>
+                    <span className="text-sm">{activity.description}</span>
                 </div>
-                <Badge variant="secondary">2 min</Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted rounded">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm">Nouveau bénéficiaire ajouté</span>
+                  <Badge variant="secondary">
+                    {new Date(activity.timestamp).toLocaleTimeString()}
+                  </Badge>
                 </div>
-                <Badge variant="secondary">15 min</Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted rounded">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm">Paiement initié - 50 bénéficiaires</span>
-                </div>
-                <Badge variant="secondary">1h</Badge>
-              </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune activité récente</p>
+            )}
             </div>
           </CardContent>
         </Card>

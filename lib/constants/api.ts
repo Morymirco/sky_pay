@@ -19,6 +19,7 @@ export const API_CONFIG = {
     },
     USERS: '/api/users',
     MEMBERS: '/api/members',
+    MEMBERS_ADD: '/api/members/create',
     ROLES: '/api/roles',
     RECHARGE_REQUESTS: '/api/recharge-requests',
     DOCS: '/api/docs',
@@ -59,7 +60,7 @@ export const HTTP_STATUS = {
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://corporate.eazykash.com";
 
 export const API_ROUTES = {
-  members: `${API_BASE_URL}/api/members`,
+  members: `${API_BASE_URL}/api/member`,
   users: `${API_BASE_URL}/api/users`,
   roles: `${API_BASE_URL}/api/roles`,
   rechargeRequests: `${API_BASE_URL}/api/recharge-requests`,

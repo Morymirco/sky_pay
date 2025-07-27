@@ -14,8 +14,8 @@ export function DashboardSkeleton() {
             </div>
             
             <div className="flex-1">
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-96" />
+          <Skeleton className="h-6 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
             </div>
           </div>
         </CardHeader>

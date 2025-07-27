@@ -1,156 +1,172 @@
 "use client"
 
-import { useState } from "react"
-import { RefreshCw, Download, AlertTriangle, Clock, Upload, Plus, CheckCircle, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import RechargeRequestDetailModal from "@/components/recharge-requests/RechargeRequestDetailModal"
 import { Badge } from "@/components/ui/badge"
-
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-interface RechargeRequest {
-  id: string
-  label: string
-  amount: number
-  attachedFile?: string
-  note?: string
-  status: "pending" | "approved" | "rejected" | "completed"
-  isUrgent: boolean
-  createdAt: string
-  updatedAt?: string
-  createdBy: string
-  processedBy?: string
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  useApproveRechargeRequest,
+  useChangeRechargeRequestStatus,
+  useCreateRechargeRequest,
+  useExportRechargeRequests,
+  useRechargeRequest,
+  useRechargeRequests,
+  useRechargeRequestsStats, // Route /api/recharge-requests/stats
+  // useRechargeRequestsOverview, // Route /api/recharge-requests/stats/overview (commentée)
+  useRejectRechargeRequest
+} from "@/lib/hooks/useRechargeRequests"
+import { CreateRechargeRequestRequest } from "@/lib/services/rechargeRequests"
+import { AlertTriangle, CheckCircle, Clock, Download, Plus, RefreshCw, X } from "lucide-react"
+import { useState } from "react"
 
 export default function RechargeRequestsPage() {
-  const [requests, setRequests] = useState<RechargeRequest[]>([
-    {
-      id: "1",
-      label: "Rechargement compte principal",
-      amount: 5000.00,
-      attachedFile: "justificatif_recharge_001.pdf",
-      note: "Rechargement urgent pour paiements en cours",
-      status: "pending",
-      isUrgent: true,
-      createdAt: "2024-01-25 10:30",
-      createdBy: "Admin"
-    },
-    {
-      id: "2",
-      label: "Rechargement compte secondaire",
-      amount: 2500.00,
-      attachedFile: "justificatif_recharge_002.pdf",
-      note: "Rechargement pour maintenance",
-      status: "approved",
-      isUrgent: false,
-      createdAt: "2024-01-24 14:15",
-      updatedAt: "2024-01-25 09:00",
-      createdBy: "Manager",
-      processedBy: "Admin"
-    },
-    {
-      id: "3",
-      label: "Rechargement compte d'urgence",
-      amount: 10000.00,
-      attachedFile: "justificatif_recharge_003.pdf",
-      note: "Rechargement pour paiements de masse",
-      status: "completed",
-      isUrgent: true,
-      createdAt: "2024-01-23 16:45",
-      updatedAt: "2024-01-24 11:30",
-      createdBy: "Admin",
-      processedBy: "Supervisor"
-    },
-    {
-      id: "4",
-      label: "Rechargement compte test",
-      amount: 1000.00,
-      note: "Rechargement pour tests système",
-      status: "rejected",
-      isUrgent: false,
-      createdAt: "2024-01-22 12:00",
-      updatedAt: "2024-01-23 10:15",
-      createdBy: "Tester",
-      processedBy: "Admin"
-    }
-  ])
+  // États locaux
+  const [activeTab, setActiveTab] = useState("create")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [urgentFilter, setUrgentFilter] = useState<boolean | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false)
+  const [approvalNotes, setApprovalNotes] = useState("")
+  const [requestToApprove, setRequestToApprove] = useState<string | null>(null)
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [rejectionNotes, setRejectionNotes] = useState("")
+  const [requestToReject, setRequestToReject] = useState<string | null>(null)
 
+  // ✅ ACTIVÉ - Récupérer les vraies données depuis l'API
+  const { data: response, isLoading, error } = useRechargeRequests(
+    currentPage, 
+    20, 
+    JSON.stringify({ 
+      search: searchTerm, 
+      status: statusFilter, 
+      isUrgent: urgentFilter 
+    })
+  )
 
+  // ✅ ACTIVÉ - Utiliser les hooks React Query réels
+  const { data: statsData } = useRechargeRequestsStats() // Route /api/recharge-requests/stats
+  // const { data: overviewData } = useRechargeRequestsOverview() // Route /api/recharge-requests/stats/overview (commentée)
+  const createRequest = useCreateRechargeRequest()
+  const changeStatus = useChangeRechargeRequestStatus()
+  const exportRequests = useExportRechargeRequests()
+  const { data: detailData, isLoading: isLoadingDetail } = useRechargeRequest(selectedRequestId || "")
+  const approveRequest = useApproveRechargeRequest()
+  const rejectRequest = useRejectRechargeRequest()
+
+  const requests = response?.data?.requests || []
+  const pagination = response?.data?.pagination || { 
+    currentPage: 1, 
+    totalPages: 1, 
+    totalItems: 0, 
+    itemsPerPage: 20, 
+    hasNextPage: false, 
+    hasPrevPage: false, 
+    nextPage: null, 
+    prevPage: null 
+  }
 
   // Form states
-  const [newRequest, setNewRequest] = useState({
-    label: "",
+  const [newRequest, setNewRequest] = useState<CreateRechargeRequestRequest>({
+    reason: "",
     amount: 0,
-    attachedFile: "",
-    note: "",
-    isUrgent: false
+    paymentMethod: "bank_transfer",
+    paymentReference: "",
+    attachmentUrl: "",
+    notes: "",
+    isUrgent: false,
+    priority: "medium"
   })
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState("create")
-
-
-
   const handleCreateRequest = () => {
-    if (newRequest.label && newRequest.amount > 0) {
-      const request: RechargeRequest = {
-        id: Date.now().toString(),
-        label: newRequest.label,
-        amount: newRequest.amount,
-        attachedFile: newRequest.attachedFile || undefined,
-        note: newRequest.note || undefined,
-        status: "pending",
-        isUrgent: newRequest.isUrgent,
-        createdAt: new Date().toLocaleString('fr-FR'),
-        createdBy: "Admin"
-      }
-      
-      setRequests([request, ...requests])
-      setNewRequest({
-        label: "",
-        amount: 0,
-        attachedFile: "",
-        note: "",
-        isUrgent: false
+    if (newRequest.reason && newRequest.amount > 0 && newRequest.paymentReference) {
+      createRequest.mutate(newRequest, {
+        onSuccess: () => {
+          setNewRequest({
+            reason: "",
+            amount: 0,
+            paymentMethod: "bank_transfer",
+            paymentReference: "",
+            attachmentUrl: "",
+            notes: "",
+            isUrgent: false,
+            priority: "medium"
+          })
+          setActiveTab("accepted") // Basculer vers l'onglet des demandes acceptées
+        }
       })
-      
-      // Afficher un message de succès
-      alert("Demande de rechargement soumise avec succès!")
     }
   }
 
-  const handleStatusChange = (id: string, newStatus: RechargeRequest['status']) => {
-    setRequests(prev => prev.map(request => 
-      request.id === id 
-        ? { 
-            ...request, 
-            status: newStatus,
-            updatedAt: new Date().toLocaleString('fr-FR'),
-            processedBy: "Admin"
-          }
-        : request
-    ))
+  const handleStatusChange = (id: string, newStatus: "pending" | "approved" | "rejected" | "completed") => {
+    changeStatus.mutate({ id, status: newStatus })
   }
 
+  const handleExport = () => {
+    exportRequests.mutate('csv')
+  }
 
+  const handleViewDetail = (id: string) => {
+    setSelectedRequestId(id)
+    setIsDetailModalOpen(true)
+  }
 
-  const exportToExcel = () => {
-    const csvContent = "data:text/csv;charset=utf-8," +
-      "ID,Label,Montant,Fichier,Note,Statut,Urgence,Créé le,Créé par\n" +
-      requests.map(request => 
-        `${request.id},${request.label},${request.amount.toFixed(2)}€,${request.attachedFile || 'Aucun'},${request.note || 'Aucune'},${request.status},${request.isUrgent ? 'Oui' : 'Non'},${request.createdAt},${request.createdBy}`
-      ).join("\n")
-    
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "demandes_rechargement.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleCloseDetail = () => {
+    setIsDetailModalOpen(false)
+    setSelectedRequestId(null)
+  }
+
+  const handleOpenApproveModal = (id: string) => {
+    setRequestToApprove(id)
+    setApprovalNotes("")
+    setIsApproveModalOpen(true)
+  }
+
+  const handleApprove = () => {
+    if (requestToApprove) {
+      approveRequest.mutate(
+        { id: requestToApprove, notes: approvalNotes },
+        {
+          onSuccess: () => {
+            setIsApproveModalOpen(false)
+            setRequestToApprove(null)
+            setApprovalNotes("")
+          }
+        }
+      )
+    }
+  }
+
+  const handleOpenRejectModal = (id: string) => {
+    setRequestToReject(id)
+    setRejectionReason("")
+    setRejectionNotes("")
+    setIsRejectModalOpen(true)
+  }
+
+  const handleReject = () => {
+    if (requestToReject && rejectionReason.trim()) {
+      rejectRequest.mutate(
+        { id: requestToReject, rejectionReason: rejectionReason.trim(), notes: rejectionNotes },
+        {
+          onSuccess: () => {
+            setIsRejectModalOpen(false)
+            setRequestToReject(null)
+            setRejectionReason("")
+            setRejectionNotes("")
+          }
+        }
+      )
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -173,9 +189,80 @@ export default function RechargeRequestsPage() {
     }
   }
 
-  const pendingCount = requests.filter(r => r.status === "pending").length
-  const urgentCount = requests.filter(r => r.isUrgent).length
-  const totalAmount = requests.reduce((sum, r) => sum + r.amount, 0)
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "bg-red-500/20 text-red-400"
+      case "medium": return "bg-yellow-500/20 text-yellow-400"
+      case "low": return "bg-green-500/20 text-green-400"
+      default: return "bg-muted text-muted-foreground"
+    }
+  }
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case "high": return "Élevée"
+      case "medium": return "Moyenne"
+      case "low": return "Faible"
+      default: return priority
+    }
+  }
+
+  // Statistiques depuis l'API
+  const stats = statsData?.data || {
+    totalRequests: 0,
+    pendingRequests: 0,
+    approvedRequests: 0,
+    rejectedRequests: 0,
+    completedRequests: 0,
+    urgentRequests: 0,
+    totalAmount: 0
+  }
+
+  // Nouvelles statistiques détaillées
+  const overview = statsData?.data || {
+    overview: {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      cancelled: 0
+    },
+    amounts: {
+      totalApproved: 0,
+      totalPending: 0
+    },
+    urgent: {
+      count: 0
+    }
+  }
+
+  // Filtrer les demandes selon l'onglet actif
+  const getFilteredRequests = () => {
+    switch (activeTab) {
+      case "accepted":
+        return requests.filter(r => r.status === "approved" || r.status === "completed")
+      case "rejected":
+        return requests.filter(r => r.status === "rejected")
+      default:
+        return requests
+    }
+  }
+
+  const filteredRequests = getFilteredRequests()
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-8">
+          <p className="text-red-500 mb-4">Erreur lors du chargement des demandes de rechargement</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -186,12 +273,152 @@ export default function RechargeRequestsPage() {
           <p className="text-sm text-muted-foreground">Gérer les demandes de rechargement de compte</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={handleExport} disabled={exportRequests.isPending}>
             <Download className="w-4 h-4 mr-2" />
-            Export Excel
+            {exportRequests.isPending ? "Export..." : "Export Excel"}
           </Button>
-
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground tracking-wider">TOTAL DEMANDES</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{stats.totalRequests}</p>
+              </div>
+              <Clock className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground tracking-wider">EN ATTENTE</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{stats.pendingRequests}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.totalAmount.toLocaleString('fr-FR')}€
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <Clock className="w-4 h-4 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground tracking-wider">URGENTES</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{stats.urgentRequests}</p>
+              </div>
+              <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground tracking-wider">MONTANT APPROUVÉ</p>
+                <p className="text-2xl font-bold text-foreground font-mono">
+                  {stats.totalAmount.toLocaleString('fr-FR')}€
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Statistiques détaillées */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Répartition par statut</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Approuvées</span>
+                <span className="text-sm font-semibold text-green-600">{stats.approvedRequests}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Rejetées</span>
+                <span className="text-sm font-semibold text-red-600">{stats.rejectedRequests}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Annulées</span>
+                <span className="text-sm font-semibold text-orange-600">0</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Montants</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Approuvé</span>
+                <span className="text-sm font-semibold text-green-600">
+                  {stats.totalAmount.toLocaleString('fr-FR')}€
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">En attente</span>
+                <span className="text-sm font-semibold text-yellow-600">
+                  {stats.totalAmount.toLocaleString('fr-FR')}€
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Urgentes</span>
+                <span className="text-sm font-semibold text-red-600">{stats.urgentRequests}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Taux de traitement</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Taux d'approbation</span>
+                <span className="text-sm font-semibold text-blue-600">
+                  {stats.totalRequests > 0 
+                    ? Math.round((stats.approvedRequests / stats.totalRequests) * 100) 
+                    : 0}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Taux de rejet</span>
+                <span className="text-sm font-semibold text-red-600">
+                  {stats.totalRequests > 0 
+                    ? Math.round((stats.rejectedRequests / stats.totalRequests) * 100) 
+                    : 0}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">% Urgentes</span>
+                <span className="text-sm font-semibold text-orange-600">
+                  {stats.totalRequests > 0 
+                    ? Math.round((stats.urgentRequests / stats.totalRequests) * 100) 
+                    : 0}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Cards Navigation */}
@@ -261,7 +488,7 @@ export default function RechargeRequestsPage() {
                   Demandes Acceptées
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {requests.filter(r => r.status === "approved" || r.status === "completed").length} demandes
+                  {stats.approvedRequests} demandes
                 </p>
               </div>
             </div>
@@ -298,13 +525,64 @@ export default function RechargeRequestsPage() {
                   Demandes Rejetées
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {requests.filter(r => r.status === "rejected").length} demandes
+                  {stats.rejectedRequests} demandes
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Search and Filters */}
+      {activeTab !== "create" && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <Card className="lg:col-span-3 bg-card border-border">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="relative">
+                  <Input
+                    placeholder="Rechercher une demande..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setCurrentPage(1) // Reset to first page on search
+                    }}
+                    className="bg-muted border-neutral-600 text-foreground placeholder-neutral-400"
+                  />
+                </div>
+                <Select
+                  value={statusFilter === null ? 'all' : statusFilter}
+                  onValueChange={(value) => setStatusFilter(value === 'all' ? null : value)}
+                >
+                  <SelectTrigger className="bg-muted border-neutral-600 text-foreground">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="approved">Approuvé</SelectItem>
+                    <SelectItem value="rejected">Rejeté</SelectItem>
+                    <SelectItem value="completed">Terminé</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={urgentFilter === null ? 'all' : urgentFilter ? 'true' : 'false'}
+                  onValueChange={(value) => setUrgentFilter(value === 'all' ? null : value === 'true' ? true : false)}
+                >
+                  <SelectTrigger className="bg-muted border-neutral-600 text-foreground">
+                    <SelectValue placeholder="Urgence" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="true">Urgentes</SelectItem>
+                    <SelectItem value="false">Normales</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Content based on active tab */}
       {activeTab === "create" && (
@@ -318,12 +596,12 @@ export default function RechargeRequestsPage() {
             <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreateRequest(); }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="label" className="text-sm font-medium">Label *</Label>
+                  <Label htmlFor="reason" className="text-sm font-medium">Raison *</Label>
                   <Input
-                    id="label"
-                    placeholder="Ex: Rechargement compte principal"
-                    value={newRequest.label}
-                    onChange={(e) => setNewRequest({...newRequest, label: e.target.value})}
+                    id="reason"
+                    placeholder="Ex: Rechargement pour paiements de membres"
+                    value={newRequest.reason}
+                    onChange={(e) => setNewRequest({...newRequest, reason: e.target.value})}
                     className="mt-2"
                     required
                   />
@@ -343,47 +621,90 @@ export default function RechargeRequestsPage() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="file" className="text-sm font-medium">Fichier joint</Label>
-                <div className="mt-2 flex items-center gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="paymentMethod" className="text-sm font-medium">Méthode de paiement *</Label>
+                  <Select
+                    value={newRequest.paymentMethod}
+                    onValueChange={(value) => setNewRequest({...newRequest, paymentMethod: value})}
+                  >
+                    <SelectTrigger className="bg-muted border-neutral-600 text-foreground">
+                      <SelectValue placeholder="Sélectionnez une méthode de paiement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank_transfer">Virement bancaire</SelectItem>
+                      <SelectItem value="credit_card">Carte de crédit</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                      <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                      <SelectItem value="other">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="paymentReference" className="text-sm font-medium">Référence de paiement *</Label>
                   <Input
-                    id="file"
-                    placeholder="Nom du fichier (optionnel)"
-                    value={newRequest.attachedFile}
-                    onChange={(e) => setNewRequest({...newRequest, attachedFile: e.target.value})}
+                    id="paymentReference"
+                    placeholder="Ex: REF123456"
+                    value={newRequest.paymentReference}
+                    onChange={(e) => setNewRequest({...newRequest, paymentReference: e.target.value})}
+                    className="mt-2"
+                    required
                   />
-                  <Button type="button" variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Parcourir
-                  </Button>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="note" className="text-sm font-medium">Note</Label>
+                <Label htmlFor="attachmentUrl" className="text-sm font-medium">URL de l'attachement</Label>
+                <Input
+                  id="attachmentUrl"
+                  placeholder="Ex: https://example.com/attachment.pdf"
+                  value={newRequest.attachmentUrl}
+                  onChange={(e) => setNewRequest({...newRequest, attachmentUrl: e.target.value})}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
                 <Textarea
-                  id="note"
-                  placeholder="Note additionnelle (optionnel)"
-                  value={newRequest.note}
-                  onChange={(e) => setNewRequest({...newRequest, note: e.target.value})}
+                  id="notes"
+                  placeholder="Notes additionnelles (optionnel)"
+                  value={newRequest.notes}
+                  onChange={(e) => setNewRequest({...newRequest, notes: e.target.value})}
                   rows={4}
                   className="mt-2"
                 />
               </div>
 
-              <div className="flex items-center space-x-2 p-4 bg-muted/30 rounded-lg">
-                <Switch
-                  id="urgent"
-                  checked={newRequest.isUrgent}
-                  onCheckedChange={(checked) => setNewRequest({...newRequest, isUrgent: checked})}
-                />
-                <Label htmlFor="urgent" className="text-sm font-medium">Demande urgente</Label>
-                {newRequest.isUrgent && (
-                  <Badge className="ml-2 bg-red-500/20 text-red-400">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    Urgent
-                  </Badge>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">Demande urgente</Label>
+                    <p className="text-xs text-muted-foreground">Traiter en priorité</p>
+                  </div>
+                  <Switch
+                    checked={newRequest.isUrgent}
+                    onCheckedChange={(checked) => setNewRequest({...newRequest, isUrgent: checked})}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="priority" className="text-sm font-medium">Priorité</Label>
+                  <Select
+                    value={newRequest.priority}
+                    onValueChange={(value) => setNewRequest({...newRequest, priority: value as "low" | "medium" | "high"})}
+                  >
+                    <SelectTrigger className="bg-muted border-neutral-600 text-foreground">
+                      <SelectValue placeholder="Sélectionnez une priorité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Faible</SelectItem>
+                      <SelectItem value="medium">Moyenne</SelectItem>
+                      <SelectItem value="high">Élevée</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4 border-t border-border">
@@ -392,11 +713,14 @@ export default function RechargeRequestsPage() {
                   variant="outline"
                   onClick={() => {
                     setNewRequest({
-                      label: "",
+                      reason: "",
                       amount: 0,
-                      attachedFile: "",
-                      note: "",
-                      isUrgent: false
+                      paymentMethod: "bank_transfer",
+                      paymentReference: "",
+                      attachmentUrl: "",
+                      notes: "",
+                      isUrgent: false,
+                      priority: "medium"
                     })
                   }}
                   className="flex-1"
@@ -406,12 +730,25 @@ export default function RechargeRequestsPage() {
                 <Button 
                   type="submit"
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  disabled={!newRequest.label || newRequest.amount <= 0}
+                  disabled={!newRequest.reason || newRequest.amount <= 0 || !newRequest.paymentReference || createRequest.isPending}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer la Demande
+                  {createRequest.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Création...
+                    </div>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer la Demande
+                    </>
+                  )}
                 </Button>
               </div>
+              
+              {createRequest.isError && (
+                <p className="text-red-500 text-sm">{createRequest.error?.message || 'Erreur lors de la création'}</p>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -425,45 +762,58 @@ export default function RechargeRequestsPage() {
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 <h3 className="text-lg font-semibold">Demandes Acceptées</h3>
                 <Badge className="bg-green-500/20 text-green-400">
-                  {requests.filter(r => r.status === "approved" || r.status === "completed").length}
+                  {filteredRequests.length}
                 </Badge>
               </div>
-              <Button variant="outline" size="sm" onClick={exportToExcel}>
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={exportRequests.isPending}>
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                {exportRequests.isPending ? "Export..." : "Export"}
               </Button>
             </div>
+
+            {isLoading && <p className="text-foreground">Chargement...</p>}
+            {error && <p className="text-red-500">Erreur lors du chargement</p>}
+            {!isLoading && !error && filteredRequests.length === 0 && (
+              <p className="text-foreground">Aucune demande acceptée trouvée</p>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">LABEL</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RAISON</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MONTANT</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">FICHIER</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MÉTHODE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÉFÉRENCE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">PRIORITÉ</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">URGENCE</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">STATUT</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">CRÉÉ LE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.filter(r => r.status === "approved" || r.status === "completed").map((request) => (
+                  {filteredRequests.map((request) => (
                     <tr key={request.id} className="border-b border-border/50">
                       <td className="py-3 px-4">
-                        <div className="text-sm text-foreground font-medium">{request.label}</div>
-                        <div className="text-xs text-muted-foreground">par {request.createdBy}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-lg font-bold text-foreground">{request.amount.toFixed(2)}€</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        {request.attachedFile ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-foreground">{request.attachedFile}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Aucun fichier</span>
+                        <div className="text-sm text-foreground font-medium">{request.reason}</div>
+                        {request.notes && (
+                          <div className="text-xs text-muted-foreground mt-1">{request.notes}</div>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-lg font-bold text-foreground">{request.amount.toLocaleString('fr-FR')}€</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-foreground capitalize">{request.paymentMethod.replace('_', ' ')}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-foreground font-mono">{request.paymentReference}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge className={getPriorityColor(request.priority)}>
+                          {getPriorityLabel(request.priority)}
+                        </Badge>
                       </td>
                       <td className="py-3 px-4">
                         {request.isUrgent ? (
@@ -481,13 +831,74 @@ export default function RechargeRequestsPage() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-sm text-foreground">{request.createdAt}</div>
+                        <div className="text-sm text-foreground">{new Date(request.createdAt).toLocaleDateString('fr-FR')}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetail(request.id.toString())}
+                            className="h-8"
+                          >
+                            Voir détails
+                          </Button>
+                          {request.status === "pending" && (
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleOpenApproveModal(request.id.toString())}
+                                className="h-8 bg-green-600 hover:bg-green-700"
+                                disabled={approveRequest.isPending}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approuver
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleOpenRejectModal(request.id.toString())}
+                                className="h-8 bg-red-600 hover:bg-red-700"
+                                disabled={rejectRequest.isPending}
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Rejeter
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {pagination.totalItems > pagination.itemsPerPage && (
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(pagination.prevPage || 1)}
+                  disabled={!pagination.hasPrevPage || isLoading}
+                  className="border-border text-muted-foreground"
+                >
+                  Précédent
+                </Button>
+                <span className="text-foreground">
+                  Page {pagination.currentPage} sur {pagination.totalPages} ({pagination.totalItems} éléments)
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(pagination.nextPage || pagination.currentPage)}
+                  disabled={!pagination.hasNextPage || isLoading}
+                  className="border-border text-muted-foreground"
+                >
+                  Suivant
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -500,45 +911,54 @@ export default function RechargeRequestsPage() {
                 <X className="w-5 h-5 text-red-500" />
                 <h3 className="text-lg font-semibold">Demandes Rejetées</h3>
                 <Badge className="bg-red-500/20 text-red-400">
-                  {requests.filter(r => r.status === "rejected").length}
+                  {filteredRequests.length}
                 </Badge>
               </div>
-              <Button variant="outline" size="sm" onClick={exportToExcel}>
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={exportRequests.isPending}>
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                {exportRequests.isPending ? "Export..." : "Export"}
               </Button>
             </div>
+
+            {isLoading && <p className="text-foreground">Chargement...</p>}
+            {error && <p className="text-red-500">Erreur lors du chargement</p>}
+            {!isLoading && !error && filteredRequests.length === 0 && (
+              <p className="text-foreground">Aucune demande rejetée trouvée</p>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">LABEL</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RAISON</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MONTANT</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">FICHIER</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">MÉTHODE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">RÉFÉRENCE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">PRIORITÉ</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">URGENCE</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">CRÉÉ LE</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground tracking-wider">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.filter(r => r.status === "rejected").map((request) => (
+                  {filteredRequests.map((request) => (
                     <tr key={request.id} className="border-b border-border/50">
                       <td className="py-3 px-4">
-                        <div className="text-sm text-foreground font-medium">{request.label}</div>
-                        <div className="text-xs text-muted-foreground">par {request.createdBy}</div>
+                        <div className="text-sm text-foreground font-medium">{request.reason}</div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-lg font-bold text-foreground">{request.amount.toFixed(2)}€</div>
+                        <div className="text-lg font-bold text-foreground">{request.amount.toLocaleString('fr-FR')}€</div>
                       </td>
                       <td className="py-3 px-4">
-                        {request.attachedFile ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-foreground">{request.attachedFile}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Aucun fichier</span>
-                        )}
+                        <div className="text-sm text-foreground capitalize">{request.paymentMethod.replace('_', ' ')}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-foreground font-mono">{request.paymentReference}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge className={getPriorityColor(request.priority)}>
+                          {getPriorityLabel(request.priority)}
+                        </Badge>
                       </td>
                       <td className="py-3 px-4">
                         {request.isUrgent ? (
@@ -551,17 +971,16 @@ export default function RechargeRequestsPage() {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-sm text-foreground">{request.createdAt}</div>
+                        <div className="text-sm text-foreground">{new Date(request.createdAt).toLocaleDateString('fr-FR')}</div>
                       </td>
                       <td className="py-3 px-4">
                         <Button
-                          variant="default"
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleStatusChange(request.id, "pending")}
-                          className="h-8 bg-blue-600 hover:bg-blue-700"
+                          onClick={() => handleViewDetail(request.id.toString())}
+                          className="h-8"
                         >
-                          <RefreshCw className="w-4 h-4 mr-1" />
-                          Relancer
+                          Voir détails
                         </Button>
                       </td>
                     </tr>
@@ -569,11 +988,167 @@ export default function RechargeRequestsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {pagination.totalItems > pagination.itemsPerPage && (
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(pagination.prevPage || 1)}
+                  disabled={!pagination.hasPrevPage || isLoading}
+                  className="border-border text-muted-foreground"
+                >
+                  Précédent
+                </Button>
+                <span className="text-foreground">
+                  Page {pagination.currentPage} sur {pagination.totalPages} ({pagination.totalItems} éléments)
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(pagination.nextPage || pagination.currentPage)}
+                  disabled={!pagination.hasNextPage || isLoading}
+                  className="border-border text-muted-foreground"
+                >
+                  Suivant
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
+      {/* Modal de détail */}
+      <RechargeRequestDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetail}
+        requestId={selectedRequestId}
+      />
 
+      {/* Modal d'approbation */}
+      <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              Approuver la demande
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="approval-notes">Notes d'approbation (optionnel)</Label>
+              <Textarea
+                id="approval-notes"
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                placeholder="Ajouter des notes pour cette approbation..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsApproveModalOpen(false)}
+                className="flex-1"
+                disabled={approveRequest.isPending}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleApprove}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={approveRequest.isPending}
+              >
+                {approveRequest.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Approbation...
+                  </div>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approuver
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {approveRequest.isError && (
+              <p className="text-red-500 text-sm">{approveRequest.error?.message || 'Erreur lors de l\'approbation'}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de rejet */}
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="w-5 h-5 text-red-500" />
+              Rejeter la demande
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rejection-reason">Raison du rejet *</Label>
+              <Textarea
+                id="rejection-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Expliquer la raison du rejet..."
+                rows={3}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="rejection-notes">Notes supplémentaires (optionnel)</Label>
+              <Textarea
+                id="rejection-notes"
+                value={rejectionNotes}
+                onChange={(e) => setRejectionNotes(e.target.value)}
+                placeholder="Ajouter des notes supplémentaires..."
+                rows={2}
+              />
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsRejectModalOpen(false)}
+                className="flex-1"
+                disabled={rejectRequest.isPending}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleReject}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={rejectRequest.isPending || !rejectionReason.trim()}
+              >
+                {rejectRequest.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Rejet...
+                  </div>
+                ) : (
+                  <>
+                    <X className="w-4 h-4 mr-2" />
+                    Rejeter
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {rejectRequest.isError && (
+              <p className="text-red-500 text-sm">{rejectRequest.error?.message || 'Erreur lors du rejet'}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

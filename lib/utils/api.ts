@@ -1,8 +1,8 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
 import {
-  showAuthErrorToast,
-  showSessionExpiredToast,
-  showTokenRefreshToast
+    showAuthErrorToast,
+    showSessionExpiredToast,
+    showTokenRefreshToast
 } from '../services/sessionToast'
 import { useAuthStore } from '../stores/authStore'
 
@@ -481,6 +481,57 @@ apiClient.interceptors.response.use(
     } else if (error.response?.status === 403) {
       // Erreur d'autorisation
       showAuthErrorToast('Vous n\'avez pas les permissions nécessaires pour cette action.')
+    } else if (error.response?.status === 400) {
+      console.warn('🔴 Bad Request - Vérifier si un nouveau token est présent')
+      
+      // Vérifier si un nouveau token est présent dans le body de la réponse d'erreur 400
+      let newToken = null
+      
+      if (error.response.data && typeof error.response.data === 'object') {
+        const responseData = error.response.data as any
+        // Vérifier response.data.newToken en premier
+        if (responseData.newToken && typeof responseData.newToken === 'string') {
+          newToken = responseData.newToken
+        } else if (responseData.data && responseData.data.newToken && typeof responseData.data.newToken === 'string') {
+          newToken = responseData.data.newToken
+        } else if (responseData.token && typeof responseData.token === 'string') {
+          newToken = responseData.token
+        } else if (responseData.data && responseData.data.token && typeof responseData.data.token === 'string') {
+          newToken = responseData.data.token
+        }
+      }
+      
+      // Fallback vers les headers si pas trouvé dans le body
+      if (!newToken) {
+        newToken = error.response.headers['authorization'] || error.response.headers['Authorization']
+      }
+      
+      if (newToken) {
+        console.log('🔄 New token received in 400 response:', newToken.substring(0, 20) + '...')
+        
+        // Extraire le token (enlever "Bearer " si présent)
+        const tokenValue = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken
+        
+        // Stocker le dernier token reçu pour les requêtes suivantes
+        lastReceivedToken = tokenValue
+        console.log('💾 Last received token stored from 400 response')
+        
+        // Mettre à jour le token dans le store Zustand
+        const { isAuthenticated, setToken } = useAuthStore.getState()
+        if (isAuthenticated) {
+          setToken(tokenValue)
+          console.log('💾 Token updated from 400 response')
+          
+          // Forcer la persistance du token dans localStorage
+          forceTokenPersistence(tokenValue)
+          
+          // Afficher un toast de renouvellement de session
+          showTokenRefreshToast()
+        }
+      }
+      
+      // Ne pas déconnecter l'utilisateur pour les erreurs 400, même sans newToken
+      // car ce sont généralement des erreurs de validation et non d'authentification
     }
     
     return Promise.reject(error)
